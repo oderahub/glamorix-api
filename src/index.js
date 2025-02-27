@@ -1,15 +1,18 @@
 import express from 'express'
 import cors from 'cors'
 import bodyParser from 'body-parser'
+import hamlet from 'hamlet'
+import dotenv from 'dotenv'
+
+dotenv.config()
 
 const app = express()
 
-const PORT = 3000
+const PORT = process.env.PORT
 
 app.disable('x-powered-by')
-
+app.use(hamlet())
 app.use(express.json())
-
 app.use(bodyParser.json())
 
 app.use(bodyParser.urlencoded({ extended: true }))
@@ -23,7 +26,7 @@ app.use(
 )
 
 app.get('/', (req, res) => {
-  res.send('Hello World')
+  res.send(`Welcome to the Glamorix API`)
 })
 
 app.listen(PORT, () => {
