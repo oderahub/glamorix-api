@@ -1,7 +1,7 @@
-// index.js
 import dotenv from 'dotenv';
 import app from './app.js';
 import { testConnection } from './config/database.js';
+import logger from './utils/logger.js';
 
 dotenv.config();
 
@@ -11,10 +11,10 @@ async function startServer() {
     try {
         await testConnection();
         app.listen(PORT, () => {
-            console.log(`Server is running on port ${PORT}`);
+            logger.info(`Server is running on port ${PORT}`);
         });
     } catch (error) {
-        console.error('Failed to start server due to database connection error:', error);
+        logger.error('Failed to start server due to database connection error:', error);
         process.exit(1);
     }
 }
