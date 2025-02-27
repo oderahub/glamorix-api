@@ -1,34 +1,22 @@
-import express from 'express'
-import cors from 'cors'
-import bodyParser from 'body-parser'
-import hamlet from 'hamlet'
-import dotenv from 'dotenv'
+// index.js
+import dotenv from 'dotenv';
+import app from './app.js';
+import { testConnection } from './config/database.js';
 
-dotenv.config()
+dotenv.config();
 
-const app = express()
+const PORT = process.env.PORT || 3000;
 
-const PORT = process.env.PORT
+async function startServer() {
+    try {
+        await testConnection();
+        app.listen(PORT, () => {
+            console.log(`Server is running on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error('Failed to start server due to database connection error:', error);
+        process.exit(1);
+    }
+}
 
-app.disable('x-powered-by')
-app.use(hamlet())
-app.use(express.json())
-app.use(bodyParser.json())
-
-app.use(bodyParser.urlencoded({ extended: true }))
-
-app.use(
-  cors({
-    origin: '*',
-    methods: 'GET,POST,PUT,DELETE',
-    allowedHeaders: 'Content-Type, Authorization'
-  })
-)
-
-app.get('/', (req, res) => {
-  res.send(`Welcome to the Glamorix API`)
-})
-
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`)
-})
+startServer();
