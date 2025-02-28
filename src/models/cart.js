@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
+import { CART_STATUS } from '../constants/cart.js';
 
 const Cart = sequelize.define('Cart', {
     id: {
@@ -20,8 +21,8 @@ const Cart = sequelize.define('Cart', {
         allowNull: true
     },
     status: {
-        type: DataTypes.ENUM('active', 'converted', 'abandoned'),
-        defaultValue: 'active'
+        type: DataTypes.ENUM(...Object.values(CART_STATUS)),
+        defaultValue: CART_STATUS.ACTIVE
     },
     expiryDate: {
         type: DataTypes.DATE,

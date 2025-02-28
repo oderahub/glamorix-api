@@ -44,16 +44,16 @@ const OrderItem = sequelize.define('OrderItem', {
     },
     subtotal: {
         type: DataTypes.DECIMAL(10, 2),
-        allowNull: false
+        allowNull: true
     },
     discount: {
         type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
+        allowNull: true,
         defaultValue: 0.00
     },
     productSnapshot: {
         type: DataTypes.JSON,
-        allowNull: false
+        allowNull: true
     }
 }, {
     timestamps: true,

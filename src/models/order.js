@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
+import { ORDER_STATUS } from '../constants/order.js';
 
 const Order = sequelize.define('Order', {
     id: {
@@ -21,8 +22,8 @@ const Order = sequelize.define('Order', {
         unique: true
     },
     status: {
-        type: DataTypes.ENUM('pending', 'processing', 'shipped', 'delivered', 'canceled', 'refunded'),
-        defaultValue: 'pending'
+        type: DataTypes.ENUM(...Object.values(ORDER_STATUS)),
+        defaultValue: ORDER_STATUS.PENDING
     },
     totalAmount: {
         type: DataTypes.DECIMAL(10, 2),
@@ -30,30 +31,34 @@ const Order = sequelize.define('Order', {
     },
     subtotal: {
         type: DataTypes.DECIMAL(10, 2),
-        allowNull: false
+        allowNull: true
     },
     tax: {
         type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
+        allowNull: true,
         defaultValue: 0.00
     },
     shippingCost: {
         type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
+        allowNull: true,
         defaultValue: 0.00
     },
     discount: {
         type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
+        allowNull: true,
         defaultValue: 0.00
     },
     shippingAddress: {
         type: DataTypes.JSON,
-        allowNull: false
+        allowNull: true
     },
-    billingAddress: {
+    billingEmail: {
         type: DataTypes.JSON,
-        allowNull: false
+        allowNull: true,
+        references: {
+            model: 'Users',
+            key: 'email'
+        }
     },
     paymentMethod: {
         type: DataTypes.STRING,
@@ -63,10 +68,10 @@ const Order = sequelize.define('Order', {
         type: DataTypes.ENUM('pending', 'paid', 'failed', 'refunded'),
         defaultValue: 'pending'
     },
-    notes: {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
+    // notes: {
+    //     type: DataTypes.TEXT,
+    //     allowNull: true
+    // },
     estimatedDeliveryDate: {
         type: DataTypes.DATE,
         allowNull: true

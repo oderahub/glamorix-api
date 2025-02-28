@@ -10,6 +10,7 @@ import Order from './order.js';
 import OrderItem from './orderItem.js';
 import Cart from './cart.js';
 import CartItem from './cartItem.js';
+import AdminLog from './adminLog.js';
 
 // Category self-referencing relationship
 Category.belongsTo(Category, { as: 'parent', foreignKey: 'parentId' });
@@ -67,6 +68,10 @@ CartItem.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
 ProductVariant.hasMany(CartItem, { foreignKey: 'variantId' });
 CartItem.belongsTo(ProductVariant, { foreignKey: 'variantId', as: 'variant' });
 
+// AdminLog and User relationships
+User.hasMany(AdminLog, { foreignKey: 'userId', as: 'adminLogs' });
+AdminLog.belongsTo(User, { foreignKey: 'userId' });
+
 export {
     User,
     Customer,
@@ -79,5 +84,6 @@ export {
     Order,
     OrderItem,
     Cart,
-    CartItem
+    CartItem,
+    AdminLog
 };

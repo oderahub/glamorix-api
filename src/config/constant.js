@@ -129,8 +129,12 @@ export const USER_STATUS = {
 export const ORDER_STATUS = {
     PENDING: 'pending',
     PROCESSING: 'processing',
+
     PACKED: 'packed',
     SHIPPED: 'shipped',
+    ACCEPTED: 'accepted',
+    IN_PROGRESS: 'inProgress',
+    ON_THE_WAY: 'onTheWay',
     OUT_FOR_DELIVERY: 'out_for_delivery',
     DELIVERED: 'delivered',
     CANCELED: 'canceled',
@@ -271,11 +275,6 @@ export const RATE_LIMITS = {
 
 
 export const CURRENCIES = {
-    USD: {
-        code: 'USD',
-        symbol: '$',
-        name: 'US Dollar'
-    },
     NGN: {
         code: 'NGN',
         symbol: '₦',
