@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
+import { PRODUCT_STATUS } from '../config/constant.js';
 
 const Product = sequelize.define('Product', {
     id: {
@@ -43,7 +44,7 @@ const Product = sequelize.define('Product', {
         unique: true
     },
     isActive: {
-        type: DataTypes.BOOLEAN,
+        type: DataTypes.ENUM(...Object.values(PRODUCT_STATUS)),
         defaultValue: true
     },
     featuredImage: {
