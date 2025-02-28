@@ -17,16 +17,19 @@ module.exports = {
     ORDER_ALREADY_SHIPPED: 'Order already shipped and cannot be canceled'
 };
 
-module.exports = {
-    PENDING: 'PENDING',
-    PROCESSING: 'PROCESSING',
-    SHIPPED: 'SHIPPED',
-    DELIVERED: 'DELIVERED',
-    CANCELLED: 'CANCELLED'
+
+export const ROLES = {
+    ADMIN: 'admin',
+    CUSTOMER: 'customer',
+    SELLER: 'seller'
 };
 
 
-module.exports = {
-    ADMIN: 'ADMIN',
-    CUSTOMER: 'CUSTOMER'
+
+
+export const USER_STATUS = {
+    PENDING: 'pending',
+    ACTIVE: 'active',
+    SUSPENDED: 'suspended',
+    DELETED: 'deleted'
 };
