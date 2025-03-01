@@ -55,7 +55,7 @@ export const errorHandler = (err, req, res, next) => {
             break
         case 'TokenExpiredError':
             statusCode = HTTP_STATUS_CODES.UNAUTHORIZED
-            message = ERROR_MESSAGES.TOKEN_EXPIRED
+            message = ERROR_MESSAGES.EXPIRED_TOKEN
             errorType = ERROR_TYPES.AUTHENTICATION
             break
         case 'OtpVerificationError':
@@ -65,7 +65,7 @@ export const errorHandler = (err, req, res, next) => {
             break
         case 'OtpExpiredError':
             statusCode = HTTP_STATUS_CODES.BAD_REQUEST
-            message = ERROR_MESSAGES.OTP_EXPIRED
+            message = ERROR_MESSAGES.EXPIRED_TOKEN
             errorType = ERROR_TYPES.VALIDATION
             break
         case 'EmailSendingError':
@@ -75,7 +75,7 @@ export const errorHandler = (err, req, res, next) => {
             break
         case 'RateLimitError':
             statusCode = HTTP_STATUS_CODES.TOO_MANY_REQUESTS
-            message = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED
+            message = ERROR_MESSAGES.RESOURCE_ALREADY_EXISTS
             errorType = ERROR_TYPES.CLIENT
             break
     }

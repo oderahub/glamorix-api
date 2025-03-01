@@ -41,6 +41,8 @@ export const ERROR_MESSAGES = {
     // Resource Errors
     RESOURCE_NOT_FOUND: 'Resource not found',
     VALIDATION_ERROR: 'Validation error',
+    RESOURCE_ALREADY_EXISTS: 'Resource already exists',
+    RESOURCE_LIMIT_EXCEEDED: 'Resource limit exceeded',
 
     // User Related Errors
     INVALID_USER_DATA: 'Invalid user data provided',
@@ -277,7 +279,8 @@ export const RATE_LIMITS = {
     LOGIN_ATTEMPTS: 5,
     PASSWORD_RESET: 3,
     PRODUCT_REVIEWS: 10,
-    API_REQUESTS_PER_MINUTE: 60
+    API_REQUESTS_PER_MINUTE: 60,
+
 }
 
 export const CURRENCIES = {
@@ -308,7 +311,8 @@ export const ERROR_TYPES = {
     SERVER: 'server_error',
     NETWORK: 'network_error',
     BUSINESS_LOGIC: 'business_logic_error',
-    THIRD_PARTY: 'third_party_error'
+    THIRD_PARTY: 'third_party_error',
+    CLIENT: 'client_error'
 }
 
 export const EMAIL_CONFIG = {
