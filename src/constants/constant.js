@@ -1,3 +1,6 @@
+import dotenv from 'dotenv'
+dotenv.config()
+
 export const HTTP_STATUS_CODES = {
     OK: 200,
     CREATED: 201,
@@ -13,7 +16,7 @@ export const HTTP_STATUS_CODES = {
     TOO_MANY_REQUESTS: 429,
     INTERNAL_SERVER_ERROR: 500,
     SERVICE_UNAVAILABLE: 503
-};
+}
 
 export const ERROR_MESSAGES = {
     // Server Errors
@@ -107,15 +110,19 @@ export const ERROR_MESSAGES = {
 
     // Wish List Errors
     WISHLIST_ITEM_ALREADY_EXISTS: 'Item already exists in wishlist',
-    WISHLIST_ITEM_NOT_FOUND: 'Item not found in wishlist'
-};
+    WISHLIST_ITEM_NOT_FOUND: 'Item not found in wishlist',
+
+    // Email Errors
+    EMAIL_SENDING_FAILED: 'Failed to send verification email'
+}
+
 
 // User Roles
 export const ROLES = {
     ADMIN: 'admin',
     CUSTOMER: 'customer',
     SELLER: 'seller'
-};
+}
 
 // User Status
 export const USER_STATUS = {
@@ -123,7 +130,7 @@ export const USER_STATUS = {
     ACTIVE: 'active',
     SUSPENDED: 'suspended',
     DELETED: 'deleted'
-};
+}
 
 // Order Status
 export const ORDER_STATUS = {
@@ -141,7 +148,7 @@ export const ORDER_STATUS = {
     RETURNED: 'returned',
     REFUNDED: 'refunded',
     ON_HOLD: 'on_hold'
-};
+}
 
 // Payment Status
 export const PAYMENT_STATUS = {
@@ -152,7 +159,7 @@ export const PAYMENT_STATUS = {
     PARTIALLY_REFUNDED: 'partially_refunded',
     AUTHORIZED: 'authorized',
     VOIDED: 'voided'
-};
+}
 
 // Payment Methods
 export const PAYMENT_METHODS = {
@@ -163,7 +170,7 @@ export const PAYMENT_METHODS = {
     CASH_ON_DELIVERY: 'cash_on_delivery',
     DIGITAL_WALLET: 'digital_wallet',
     CRYPTO: 'cryptocurrency'
-};
+}
 
 // Cart Status
 export const CART_STATUS = {
@@ -171,7 +178,7 @@ export const CART_STATUS = {
     CONVERTED: 'converted',
     ABANDONED: 'abandoned',
     MERGED: 'merged'
-};
+}
 
 // Product Status
 export const PRODUCT_STATUS = {
@@ -181,7 +188,7 @@ export const PRODUCT_STATUS = {
     OUT_OF_STOCK: 'out_of_stock',
     DISCONTINUED: 'discontinued',
     COMING_SOON: 'coming_soon'
-};
+}
 
 // Review Status
 export const REVIEW_STATUS = {
@@ -189,7 +196,7 @@ export const REVIEW_STATUS = {
     APPROVED: 'approved',
     REJECTED: 'rejected',
     FLAGGED: 'flagged'
-};
+}
 
 // Shipping Methods
 export const SHIPPING_METHODS = {
@@ -199,7 +206,7 @@ export const SHIPPING_METHODS = {
     LOCAL_PICKUP: 'local_pickup',
     FREE_SHIPPING: 'free_shipping',
     INTERNATIONAL: 'international'
-};
+}
 
 // Notification Types
 export const NOTIFICATION_TYPES = {
@@ -214,14 +221,14 @@ export const NOTIFICATION_TYPES = {
     PRICE_DROP: 'price_drop',
     REVIEW_APPROVED: 'review_approved',
     ACCOUNT_LOCKED: 'account_locked'
-};
+}
 
 // Validation Constants
 export const VALIDATION = {
     PASSWORD_MIN_LENGTH: 8,
     PASSWORD_REGEX: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
     EMAIL_REGEX: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-    PHONE_REGEX: /^\+?[1-9]\d{1,14}$/,
+    PHONE_REGEX: /^(0\d{10})$/,
     USERNAME_REGEX: /^[a-zA-Z0-9._-]{3,20}$/,
     MAX_CART_ITEMS: 50,
     MAX_WISHLIST_ITEMS: 100,
@@ -230,7 +237,7 @@ export const VALIDATION = {
     MAX_REVIEW_LENGTH: 1000,
     MIN_REVIEW_LENGTH: 10,
     OTP_EXPIRY_MINUTES: 10
-};
+}
 
 // Cache Control Constants
 export const CACHE_CONTROL = {
@@ -240,7 +247,7 @@ export const CACHE_CONTROL = {
     CART: 'no-store',
     ORDERS: 'no-cache',
     STATIC_ASSETS: 'max-age=31536000'
-};
+}
 
 // Log Levels
 export const LOG_LEVELS = {
@@ -249,7 +256,7 @@ export const LOG_LEVELS = {
     INFO: 'info',
     DEBUG: 'debug',
     TRACE: 'trace'
-};
+}
 
 // Feature Flags
 export const FEATURE_FLAGS = {
@@ -263,7 +270,7 @@ export const FEATURE_FLAGS = {
     MULTI_CURRENCY: false,
     MULTI_LANGUAGE: false,
     INVENTORY_ALERTS: true
-};
+}
 
 // API Rate Limits
 export const RATE_LIMITS = {
@@ -271,8 +278,7 @@ export const RATE_LIMITS = {
     PASSWORD_RESET: 3,
     PRODUCT_REVIEWS: 10,
     API_REQUESTS_PER_MINUTE: 60
-};
-
+}
 
 export const CURRENCIES = {
     NGN: {
@@ -280,7 +286,7 @@ export const CURRENCIES = {
         symbol: '₦',
         name: 'Nigerian Naira'
     }
-};
+}
 
 // Sorting and Filtering Constants
 export const PRODUCT_SORT_OPTIONS = {
@@ -291,7 +297,7 @@ export const PRODUCT_SORT_OPTIONS = {
     BEST_SELLING: 'sales_desc',
     TOP_RATED: 'rating_desc',
     RELEVANCE: 'relevance'
-};
+}
 
 // Error Types
 export const ERROR_TYPES = {
@@ -303,4 +309,17 @@ export const ERROR_TYPES = {
     NETWORK: 'network_error',
     BUSINESS_LOGIC: 'business_logic_error',
     THIRD_PARTY: 'third_party_error'
-};
+}
+
+export const EMAIL_CONFIG = {
+    SMTP_HOST: 'smtp.gmail.com',
+    SMTP_PORT: 587,
+    SMTP_SECURE: false,
+    SMTP_USER: process.env.GMAIL_USER,
+    SMTP_PASSWORD: process.env.GMAIL_PASS,
+    SENDER_NAME: process.env.SENDER_NAME,
+    SENDER_EMAIL: process.env.GMAIL_USER,
+    SUPPORT_EMAIL: process.env.SUPPORT_EMAIL,
+    COMPANY_NAME: process.env.COMPANY_NAME,
+    LOGO_URL: process.env.LOGO_URL
+}
