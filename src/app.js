@@ -3,6 +3,7 @@ import cors from 'cors'
 import bodyParser from 'body-parser'
 import helmet from 'helmet'
 import authRoute from './routes/authRoutes.js'
+import orderRoute from './routes/orderRoutes.js'
 import { errorHandler } from './middlewares/error-handler.js'
 
 const app = express()
@@ -25,6 +26,7 @@ app.get('/', (req, res) => {
 })
 
 app.use('/api/auth', authRoute)
+app.use('/api/orders', orderRoute)
 
 app.use(errorHandler)
 
