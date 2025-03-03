@@ -4,6 +4,9 @@ import bodyParser from 'body-parser'
 import helmet from 'helmet'
 import authRoute from './routes/authRoutes.js'
 import orderRoute from './routes/orderRoutes.js'
+import adminRoute from './routes/adminRoutes.js'
+import categoryRoute from './routes/categoryRoutes.js'
+import productRoute from './routes/productRoutes.js'
 import { errorHandler } from './middlewares/error-handler.js'
 
 const app = express()
@@ -26,7 +29,10 @@ app.get('/', (req, res) => {
 })
 
 app.use('/api/auth', authRoute)
+app.use('/api/admin', adminRoute)
+app.use('/api/categories', categoryRoute)
 app.use('/api/orders', orderRoute)
+app.use('/api/products', productRoute)
 
 app.use(errorHandler)
 
