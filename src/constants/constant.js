@@ -89,11 +89,13 @@ export const ERROR_MESSAGES = {
     PAYMENT_REFUND_FAILED: 'Payment refund failed',
     INVALID_COUPON: 'Invalid or expired coupon code',
     COUPON_ALREADY_USED: 'Coupon has already been used',
+    PAYMENT_METHODS_REQUIRED: 'Payment method is required',
 
     // Shipping Related Errors
     SHIPPING_METHOD_NOT_AVAILABLE: 'Shipping method not available for your location',
     INVALID_SHIPPING_ADDRESS: 'Invalid shipping address',
     ADDRESS_VALIDATION_FAILED: 'Address validation failed',
+    SHIPPING_DETAILS_REQUIRED: 'Shipping details are required',
 
     // Rate Limiting
     TOO_MANY_REQUESTS: 'Too many requests, please try again later',
@@ -131,7 +133,8 @@ export const USER_STATUS = {
     PENDING: 'pending',
     ACTIVE: 'active',
     SUSPENDED: 'suspended',
-    DELETED: 'deleted'
+    DELETED: 'deleted',
+    BANNED: 'banned'
 }
 
 // Order Status
@@ -167,7 +170,7 @@ export const PAYMENT_STATUS = {
 export const PAYMENT_METHODS = {
     CREDIT_CARD: 'credit_card',
     DEBIT_CARD: 'debit_card',
-    PAYPAL: 'paypal',
+    PAYSTACK: 'paystack',
     BANK_TRANSFER: 'bank_transfer',
     CASH_ON_DELIVERY: 'cash_on_delivery',
     DIGITAL_WALLET: 'digital_wallet',
@@ -187,6 +190,7 @@ export const PRODUCT_STATUS = {
     DRAFT: 'draft',
     ACTIVE: 'active',
     INACTIVE: 'inactive',
+    ARCHIEVED: 'archieved',
     OUT_OF_STOCK: 'out_of_stock',
     DISCONTINUED: 'discontinued',
     COMING_SOON: 'coming_soon'
@@ -327,3 +331,7 @@ export const EMAIL_CONFIG = {
     COMPANY_NAME: process.env.COMPANY_NAME,
     LOGO_URL: process.env.LOGO_URL
 }
+
+
+
+
