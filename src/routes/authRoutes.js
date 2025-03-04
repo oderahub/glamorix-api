@@ -17,7 +17,7 @@ import {
     forgotPasswordSchema,
     resetPasswordSchema,
     changePasswordSchema
-} from '../validations/auth.js'
+} from '../validations/index.js'
 
 const router = express.Router()
 

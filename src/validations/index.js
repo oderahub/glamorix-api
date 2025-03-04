@@ -160,3 +160,14 @@ export const orderSchema = Joi.object({
     paymentMethod: Joi.string().valid(...Object.values(PAYMENT_METHODS)).required(),
     paystackReference: Joi.string().optional()
 });
+
+export const cartItemSchema = Joi.object({
+    productId: Joi.string().uuid().required(),
+    variantId: Joi.string().uuid().optional(),
+    quantity: Joi.number().integer().min(1).required()
+});
+
+export const cartUpdateSchema = Joi.object({
+    items: Joi.array().items(cartItemSchema).min(1).required()
+});
+

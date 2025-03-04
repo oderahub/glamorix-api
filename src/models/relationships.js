@@ -16,6 +16,11 @@ import AdminLog from './adminLog.js'
 Category.belongsTo(Category, { as: 'parent', foreignKey: 'parentId' })
 Category.hasMany(Category, { as: 'subcategories', foreignKey: 'parentId' })
 
+// Product-Category relationship
+Product.belongsToMany(Category, { through: ProductCategory, foreignKey: 'productId', as: 'categories' });
+Category.belongsToMany(Product, { through: ProductCategory, foreignKey: 'categoryId', as: 'products' });
+
+
 // Product relationships
 Product.hasMany(ProductImage, { foreignKey: 'productId', as: 'images' })
 ProductImage.belongsTo(Product, { foreignKey: 'productId' })
@@ -23,16 +28,16 @@ ProductImage.belongsTo(Product, { foreignKey: 'productId' })
 Product.hasMany(ProductVariant, { foreignKey: 'productId', as: 'variants' })
 ProductVariant.belongsTo(Product, { foreignKey: 'productId' })
 
-Product.belongsToMany(Category, {
-  through: ProductCategory,
-  foreignKey: 'productId',
-  as: 'categories'
-})
-Category.belongsToMany(Product, {
-  through: ProductCategory,
-  foreignKey: 'categoryId',
-  as: 'products'
-})
+// Product.belongsToMany(Category, {
+//     through: ProductCategory,
+//     foreignKey: 'productId',
+//     as: 'categories'
+// })
+// Category.belongsToMany(Product, {
+//     through: ProductCategory,
+//     foreignKey: 'categoryId',
+//     as: 'products'
+// })
 
 // User relationships
 User.hasOne(Customer, { foreignKey: 'userId', as: 'customerProfile' })
@@ -81,17 +86,17 @@ User.hasMany(AdminLog, { foreignKey: 'userId', as: 'adminLogs' })
 AdminLog.belongsTo(User, { foreignKey: 'userId' })
 
 export {
-  User,
-  Customer,
-  Category,
-  Product,
-  ProductImage,
-  ProductCategory,
-  ProductVariant,
-  Review,
-  Order,
-  OrderItem,
-  Cart,
-  CartItem,
-  AdminLog
+    User,
+    Customer,
+    Category,
+    Product,
+    ProductImage,
+    ProductCategory,
+    ProductVariant,
+    Review,
+    Order,
+    OrderItem,
+    Cart,
+    CartItem,
+    AdminLog,
 }
