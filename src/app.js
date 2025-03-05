@@ -8,6 +8,9 @@ import adminRoute from './routes/adminRoutes.js'
 import categoryRoute from './routes/categoryRoutes.js'
 import productRoute from './routes/productRoutes.js'
 import { errorHandler } from './middlewares/error-handler.js'
+import swaggerUi from 'swagger-ui-express';
+import fs from 'fs';
+import YAML from 'yaml';
 
 const app = express()
 
@@ -33,6 +36,10 @@ app.use('/api/admin', adminRoute)
 app.use('/api/categories', categoryRoute)
 app.use('/api/orders', orderRoute)
 app.use('/api/products', productRoute)
+
+
+const swaggerDocument = YAML.parse(fs.readFileSync('./docs/openapi.yaml', 'utf8'));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(errorHandler)
 

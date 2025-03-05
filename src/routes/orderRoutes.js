@@ -1,8 +1,9 @@
 import express from 'express';
 import { authenticateToken } from '../utils/authMiddleware.js';
-import { placeOrder, getOrderDetails, getOrderStatus, cancelOrder, getCart, addToCart, updateCart, removeFromCart, checkout } from '../controllers/orderController.js';
-import { validateRequest } from '../utils/validationMiddleware.js';
-import { cartItemSchema, cartUpdateSchema, checkoutSchema, orderSchema } from '../utils/validationSchemas.js';
+import { placeOrder, getOrderDetails, getOrderStatus, cancelOrder } from '../controllers/orderController.js';
+import { getCart, addToCart, updateCart, removeFromCart, checkout } from '../controllers/cartController.js';
+import { validateRequest } from '../middlewares/authValidate.js';
+import { cartItemSchema, cartUpdateSchema, orderSchema } from '../validations/index.js';
 import Joi from 'joi';
 
 const router = express.Router();
@@ -11,7 +12,7 @@ router.get('/cart', authenticateToken, getCart);
 router.post('/cart', authenticateToken, validateRequest(cartItemSchema), addToCart);
 router.patch('/cart', authenticateToken, validateRequest(cartUpdateSchema), updateCart);
 router.delete('/cart', authenticateToken, validateRequest(cartItemSchema), removeFromCart);
-router.post('/cart/checkout', authenticateToken, validateRequest(checkoutSchema), checkout);
+router.post('/cart/checkout', authenticateToken, checkout);
 router.post('/', authenticateToken, validateRequest(orderSchema), placeOrder);
 router.get('/:orderId', authenticateToken, getOrderDetails);
 router.get('/status/:orderId', getOrderStatus);
