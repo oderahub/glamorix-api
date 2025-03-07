@@ -27,7 +27,7 @@ const CartItem = sequelize.define(
     },
     variantId: {
       type: DataTypes.UUID,
-      allowNull: true,
+      allowNull: false,
       references: {
         model: 'ProductVariants',
         key: 'id'

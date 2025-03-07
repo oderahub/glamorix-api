@@ -95,24 +95,33 @@ export const changePasswordSchema = Joi.object({
         })
 })
 
-
-
 export const productSchema = Joi.object({
     name: Joi.string().required(),
     slug: Joi.string().required(),
     description: Joi.string().optional(),
     price: Joi.number().precision(2).positive().required(),
     discountPercentage: Joi.number().integer().min(0).max(100).optional(),
-    stockQuantity: Joi.number().integer().min(0).required(),
+    stockQuantity: Joi.number().integer().min(0).optional(), // Optional since variants handle stock
     sku: Joi.string().required(),
     isActive: Joi.boolean().optional(),
-    featuredImage: Joi.string().uri().optional(), // Optional for now, handled by upload
-
+    featuredImage: Joi.string().uri().optional(),
     categoryIds: Joi.array()
         .items(Joi.string().uuid().required())
-        .min(1) // At least one category must be provided
-        .required()
-});
+        .min(1)
+        .required(),
+    variants: Joi.array()
+        .items(
+            Joi.object({
+                size: Joi.string().optional(),
+                color: Joi.string().optional(),
+                material: Joi.string().optional(),
+                price: Joi.number().precision(2).positive().optional(),
+                stockQuantity: Joi.number().integer().min(0).required()
+            })
+        )
+        .min(1) // At least one variant is required
+        .required() // Make variants mandatory
+}).unknown(false); // Disallow unknown fields
 
 export const updateProductSchema = Joi.object({
     name: Joi.string().optional(),

@@ -18,8 +18,21 @@ export const getCart = async (req, res, next) => {
 
         const items = await CartItem.findAll({
             where: { cartId: cart.id },
-            include: [{ model: Product, include: [ProductVariant] }]
+            include: [
+                {
+                    model: Product,
+                    as: 'product', // Match the alias
+                    include: [
+                        {
+                            model: ProductVariant,
+                            as: 'variants', // Match the alias
+                            required: false
+                        }
+                    ]
+                }
+            ]
         });
+
         const total = items.reduce((sum, item) => sum + (item.unitPrice || 0) * item.quantity, 0);
 
         return ApiResponse.success(res, 'Cart retrieved', { cart, items, total });
@@ -30,38 +43,63 @@ export const getCart = async (req, res, next) => {
 
 export const addToCart = async (req, res, next) => {
     const { productId, variantId, quantity } = req.body;
-    const t = await sequelize.transaction();
+    let t;
     try {
+        t = await sequelize.transaction();
+
+        if (!variantId) {
+            throw new Error('variantId is required');
+        }
+        if (quantity <= 0) {
+            throw new Error('Quantity must be positive');
+        }
+
         let cart = await Cart.findOne({ where: { userId: req.user.id, status: CART_STATUS.ACTIVE } });
         if (!cart) {
             cart = await Cart.create({ userId: req.user.id, status: CART_STATUS.ACTIVE }, { transaction: t });
         }
 
         const product = await Product.findByPk(productId, { transaction: t });
-        if (!product) throw new Error(ERROR_MESSAGES.PRODUCT_NOT_FOUND);
-        if (product.stockQuantity < quantity) throw new Error(ERROR_MESSAGES.PRODUCT_INSUFFICIENT_STOCK);
+        if (!product) {
+            throw new Error(ERROR_MESSAGES.PRODUCT_NOT_FOUND);
+        }
+
+        const productVariant = await ProductVariant.findByPk(variantId, { transaction: t });
+        if (!productVariant || productVariant.productId !== productId) {
+            throw new Error('Invalid product variant');
+        }
+        if (productVariant.stockQuantity < quantity) {
+            throw new Error('Insufficient stock for variant');
+        }
+
+        const unitPrice = productVariant.price || product.price;
 
         const existingItem = await CartItem.findOne({
             where: { cartId: cart.id, productId, variantId },
             transaction: t
         });
+
         if (existingItem) {
-            await existingItem.update({ quantity: existingItem.quantity + quantity }, { transaction: t });
+            existingItem.quantity += quantity;
+            await existingItem.update({ quantity: existingItem.quantity, unitPrice }, { transaction: t });
         } else {
-            const unitPrice = variantId ? (await ProductVariant.findByPk(variantId, { transaction: t }))?.price || product.price : product.price;
             await CartItem.create({
                 cartId: cart.id,
                 productId,
                 variantId,
                 quantity,
-                unitPrice
+                unitPrice,
+                addedAt: new Date()
             }, { transaction: t });
         }
 
         await t.commit();
-        return ApiResponse.success(res, 'Item added to cart', await getCartItems(cart.id));
+        const cartItems = await getCartItems(cart.id);
+        return ApiResponse.success(res, 'Item added to cart', cartItems);
     } catch (error) {
-        await t.rollback();
+        if (t && !t.finished) {
+            await t.rollback();
+        }
         next(error);
     }
 };
@@ -194,9 +232,26 @@ export const checkout = async (req, res, next) => {
 
 // Helper function to get cart items
 async function getCartItems(cartId) {
-    const items = await CartItem.findAll({
-        where: { cartId },
-        include: [{ model: Product, include: [ProductVariant] }]
-    });
-    return items;
+    try {
+        const items = await CartItem.findAll({
+            where: { cartId },
+            include: [
+                {
+                    model: Product,
+                    as: 'product', // Match the alias defined in CartItem.belongsTo(Product, { as: 'product' })
+                    include: [
+                        {
+                            model: ProductVariant,
+                            as: 'variants', // Match the alias defined in Product.hasMany(ProductVariant, { as: 'variants' })
+                            required: false // Make ProductVariant optional
+                        }
+                    ]
+                }
+            ]
+        });
+        return items;
+    } catch (error) {
+        console.error('Error in getCartItems:', error);
+        return []; // Return empty array to prevent crashes
+    }
 }
