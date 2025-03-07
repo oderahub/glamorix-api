@@ -63,11 +63,49 @@ The Glamorix API is built using Node.js, Express, and Sequelize with a PostgreSQ
    ```
    PORT=3000
    SWAGGER_PORT=3001
-   DATABASE_URL=postgres://user:password@localhost:5432/glamorix_db
    JWT_SECRET=your-secure-jwt-secret
    EMAIL_USER=your-email@gmail.com
    EMAIL_PASS=your-email-password
+
    ```
+
+## Setting Up MySQL with MAMP
+
+Local Development
+Install MAMP:
+Download from mamp.info.
+
+Open MAMP and click “Start” (MySQL port: 8889).
+
+Create Database:
+Open phpMyAdmin (http://localhost:8888/phpmyadmin).
+
+Log in with root/root.
+
+Create glamorix_db.
+
+Set DATABASE_URL:
+
+DATABASE_URL=mysql://root:root@localhost:8889/glamorix_db
+
+## Troubleshooting Connection Issues
+
+Error: Can't connect to MySQL server on '127.0.0.1:8889' (61) or Can't connect... through socket '/tmp/mysql.sock' (2):
+Ensure MAMP MySQL is running.
+
+Check port in MAMP > Preferences > Ports (default: 8889).
+
+Use correct socket: mysql -u root -p -h localhost -P 8889 --socket=/Applications/MAMP/tmp/mysql/mysql.sock.
+
+Stop conflicting MySQL instances: brew services stop mysql.
+
+Use MAMP’s mysql client (if path exists): /Applications/MAMP/Library/bin/mysql -u root -p -h localhost -P 8889.
+
+Update config/database.js with dialectOptions.socketPath if socket issues persist.
+
+Check MAMP MySQL logs for errors.
+
+Reinstall MAMP if unresolved.
 
 4. **Initialize the database**:
    Run the seed script to create tables and an admin user:
