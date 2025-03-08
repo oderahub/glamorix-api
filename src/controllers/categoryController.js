@@ -37,10 +37,6 @@ export const getCategoryDetails = async (req, res, next) => {
 
 export const createMainCategory = async (req, res, next) => {
     try {
-        // if (req.user.role !== ROLES.ADMIN) {
-        //     return ApiResponse.error(res, ERROR_MESSAGES.FORBIDDEN, HTTP_STATUS_CODES.FORBIDDEN);
-        // }
-
         const { name, description, image, isActive, displayOrder } = req.body;
         const slug = slugify(name, { lower: true, strict: true });
         const categoryImage = req.file ? req.file.buffer.toString('base64') : image;
@@ -62,10 +58,6 @@ export const createMainCategory = async (req, res, next) => {
 
 export const createSubCategory = async (req, res, next) => {
     try {
-        // if (req.user.role !== ROLES.ADMIN) {
-        //     return ApiResponse.error(res, ERROR_MESSAGES.FORBIDDEN, HTTP_STATUS_CODES.FORBIDDEN);
-        // }
-
         const parent = await Category.findByPk(req.params.categoryId);
         if (!parent) {
             return ApiResponse.error(res, ERROR_MESSAGES.PARENT_CATEGORY_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
@@ -93,10 +85,6 @@ export const createSubCategory = async (req, res, next) => {
 
 export const createSubSubCategory = async (req, res, next) => {
     try {
-        // if (req.user.role !== ROLES.ADMIN) {
-        //     return ApiResponse.error(res, ERROR_MESSAGES.FORBIDDEN, HTTP_STATUS_CODES.FORBIDDEN);
-        // }
-
         const parent = await Category.findByPk(req.params.subCategoryId);
         if (!parent) {
             return ApiResponse.error(res, ERROR_MESSAGES.PARENT_CATEGORY_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
@@ -124,10 +112,6 @@ export const createSubSubCategory = async (req, res, next) => {
 
 export const updateCategory = async (req, res, next) => {
     try {
-        // if (req.user.role !== ROLES.ADMIN) {
-        //     return ApiResponse.error(res, ERROR_MESSAGES.FORBIDDEN, HTTP_STATUS_CODES.FORBIDDEN);
-        // }
-
         const category = await Category.findByPk(req.params.id);
         if (!category) {
             return ApiResponse.error(res, ERROR_MESSAGES.CATEGORY_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
@@ -155,10 +139,6 @@ export const updateCategory = async (req, res, next) => {
 
 export const deleteCategory = async (req, res, next) => {
     try {
-        // if (req.user.role !== ROLES.ADMIN) {
-        //     return ApiResponse.error(res, ERROR_MESSAGES.FORBIDDEN, HTTP_STATUS_CODES.FORBIDDEN);
-        // }
-
         const category = await Category.findByPk(req.params.id);
         if (!category) {
             return ApiResponse.error(res, ERROR_MESSAGES.CATEGORY_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);

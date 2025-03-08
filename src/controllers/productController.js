@@ -2,7 +2,6 @@ import { Product, ProductCategory, Category, ProductVariant } from '../models/in
 import ApiResponse from '../utils/ApiResponse.js';
 import { HTTP_STATUS_CODES, ERROR_MESSAGES, PRODUCT_STATUS } from '../constants/constant.js';
 import slugify from 'slugify';
-import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -154,15 +153,26 @@ export const deleteProduct = async (req, res, next) => {
 };
 
 export const updateStock = async (req, res, next) => {
+    const t = await sequelize.transaction();
     try {
+        const { variantId } = req.query;
+        if (!variantId) {
+            return ApiResponse.error(res, 'variantId is required', HTTP_STATUS_CODES.BAD_REQUEST);
+        }
         const product = await Product.findByPk(req.params.id, { paranoid: false });
         if (!product) {
             return ApiResponse.error(res, ERROR_MESSAGES.PRODUCT_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
         }
+        const productVariant = await ProductVariant.findOne({ where: { id: variantId, productId: product.id }, transaction: t });
+        if (!productVariant) {
+            return ApiResponse.error(res, 'Product variant not found', HTTP_STATUS_CODES.NOT_FOUND);
+        }
         const { stockQuantity } = req.body;
-        await product.update({ stockQuantity });
-        return ApiResponse.success(res, 'Stock updated successfully', product);
+        await productVariant.update({ stockQuantity }, { transaction: t });
+        await t.commit();
+        return ApiResponse.success(res, 'Stock updated successfully', productVariant);
     } catch (error) {
+        await t.rollback();
         next(error);
     }
 };
