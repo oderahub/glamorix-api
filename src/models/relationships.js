@@ -28,17 +28,6 @@ ProductImage.belongsTo(Product, { foreignKey: 'productId' })
 Product.hasMany(ProductVariant, { foreignKey: 'productId', as: 'variants' })
 ProductVariant.belongsTo(Product, { foreignKey: 'productId' })
 
-// Product.belongsToMany(Category, {
-//     through: ProductCategory,
-//     foreignKey: 'productId',
-//     as: 'categories'
-// })
-// Category.belongsToMany(Product, {
-//     through: ProductCategory,
-//     foreignKey: 'categoryId',
-//     as: 'products'
-// })
-
 // User relationships
 User.hasOne(Customer, { foreignKey: 'userId', as: 'customerProfile' })
 Customer.belongsTo(User, { foreignKey: 'userId' })

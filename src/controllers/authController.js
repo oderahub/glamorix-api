@@ -106,6 +106,6 @@ export const changePassword = async (req, res, next) => {
 }
 
 export const logout = async (req, res) => {
-    await User.update({ refreshToken: null }, { where: { id: req.user.id } })
+    await User.update({ refreshToken: null, token: null }, { where: { id: req.user.id } })
     return ApiResponse.success(res, 'Logged out')
 }
