@@ -196,7 +196,6 @@ EMAIL_PASS=your-app-specific-password
 ## Development
 
 - **Code Style**: Follow JavaScript/ES6 standards with consistent indentation.
-- **Branching**: Use git flow (e.g., `feature/`, `bugfix/`, `release/` branches).
 - **Linting**: Install and configure ESLint (optional):
   ```bash
   npm install eslint --save-dev
