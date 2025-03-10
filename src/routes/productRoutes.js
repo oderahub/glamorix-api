@@ -67,40 +67,40 @@ router.get('/:id', async (req, res, next) => {
     }
 });
 
-// router.get('/category/:id', async (req, res, next) => {
-//     try {
-//         const { limit = 10, offset = 0, isActive = true, sort = 'createdAt_desc' } = req.query;
-//         let order = [['createdAt', 'DESC']];
-//         if (sort === 'price_asc') order = [['price', 'ASC']];
-//         if (sort === 'price_desc') order = [['price', 'DESC']];
+router.get('/category/:id', async (req, res, next) => {
+    try {
+        const { limit = 10, offset = 0, isActive = true, sort = 'createdAt_desc' } = req.query;
+        let order = [['createdAt', 'DESC']];
+        if (sort === 'price_asc') order = [['price', 'ASC']];
+        if (sort === 'price_desc') order = [['price', 'DESC']];
 
-//         const products = await Product.findAll({
-//             include: [{
-//                 model: Category,
-//                 as: 'categories',
-//                 where: { id: req.params.id, ...(isActive ? { isActive } : {}) },
-//                 through: { attributes: [] },
-//                 paranoid: false
-//             }],
-//             limit: parseInt(limit),
-//             offset: parseInt(offset),
-//             order
-//         });
-//         const total = await Product.count({
-//             include: [{
-//                 model: Category,
-//                 as: 'categories',
-//                 where: { id: req.params.id, ...(isActive ? { isActive } : {}) },
-//                 paranoid: false
-//             }]
-//         });
-//         return ApiResponse.success(res, 'Products by category', {
-//             products,
-//             pagination: { limit, offset, total }
-//         });
-//     } catch (error) {
-//         next(error);
-//     }
-// });
+        const products = await Product.findAll({
+            include: [{
+                model: Category,
+                as: 'categories',
+                where: { id: req.params.id, ...(isActive ? { isActive } : {}) },
+                through: { attributes: [] },
+                paranoid: false
+            }],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            order
+        });
+        const total = await Product.count({
+            include: [{
+                model: Category,
+                as: 'categories',
+                where: { id: req.params.id, ...(isActive ? { isActive } : {}) },
+                paranoid: false
+            }]
+        });
+        return ApiResponse.success(res, 'Products by category', {
+            products,
+            pagination: { limit, offset, total }
+        });
+    } catch (error) {
+        next(error);
+    }
+});
 
 export default router;
