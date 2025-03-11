@@ -82,8 +82,13 @@ export const getCustomerDetails = async (req, res, next) => {
 };
 
 export const banCustomer = async (req, res, next) => {
+
     try {
-        const customer = await Customer.findByPk(req.params.id);
+        const customer = await Customer.findByPk(req.params.id, {
+            include: [{ model: User, attributes: ['id', 'email', 'role', 'status'] }],
+            paranoid: false
+        });
+
         if (!customer) {
             return ApiResponse.error(res, ERROR_MESSAGES.CUSTOMER_PROFILE_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
         }
@@ -104,7 +109,11 @@ export const banCustomer = async (req, res, next) => {
 
 export const deleteCustomer = async (req, res, next) => {
     try {
-        const customer = await Customer.findByPk(req.params.id);
+        const customer = await Customer.findByPk(req.params.id, {
+            include: [{ model: User, attributes: ['id', 'email', 'role', 'status'] }],
+            paranoid: false
+        });
+
         if (!customer) {
             return ApiResponse.error(res, ERROR_MESSAGES.CUSTOMER_PROFILE_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
         }
@@ -116,7 +125,7 @@ export const deleteCustomer = async (req, res, next) => {
         }
 
         // Soft delete customer
-        await customer.destroy();
+        await customer.destroy({ force: true });
 
         return ApiResponse.success(res, 'Customer deleted successfully', null, HTTP_STATUS_CODES.NO_CONTENT);
     } catch (error) {

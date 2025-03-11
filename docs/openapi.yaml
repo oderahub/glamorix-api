@@ -600,12 +600,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /auth/change-password:
+  post:
+    summary: Change user password
+    tags:
+      - Authentication
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              oldPassword:
+                type: string
+              newPassword:
+                type: string
+            required:
+              - oldPassword
+              - newPassword
+    responses:
+      '200':
+        description: Password changed successfully
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiResponse'
+      '400':
+        description: Invalid old password
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Error'
   /admin/categories:
     post:
       summary: Create a main category
       tags:
         - Admin
-        - Categories
       security:
         - bearerAuth: []
       requestBody:
@@ -632,7 +665,6 @@ paths:
       summary: Create a subcategory
       tags:
         - Admin
-        - Categories
       security:
         - bearerAuth: []
       parameters:
@@ -666,7 +698,6 @@ paths:
       summary: Create a sub-subcategory
       tags:
         - Admin
-        - Categories
       security:
         - bearerAuth: []
       parameters:
@@ -739,7 +770,6 @@ paths:
       summary: Update a category
       tags:
         - Admin
-        - Categories
       security:
         - bearerAuth: []
       parameters:
@@ -778,7 +808,6 @@ paths:
       summary: Delete a category
       tags:
         - Admin
-        - Categories
       security:
         - bearerAuth: []
       parameters:
@@ -812,13 +841,12 @@ paths:
       summary: Create a product
       tags:
         - Admin
-        - Products
       security:
         - bearerAuth: []
       requestBody:
         required: true
         content:
-          multipart/form-data:
+          application/json:
             schema:
               type: object
               properties:
@@ -901,7 +929,6 @@ paths:
       summary: Update a product
       tags:
         - Admin
-        - Products
       security:
         - bearerAuth: []
       parameters:
@@ -914,7 +941,7 @@ paths:
       requestBody:
         required: true
         content:
-          multipart/form-data:
+          application/json:
             schema:
               type: object
               properties:
@@ -996,7 +1023,6 @@ paths:
       summary: Delete a product
       tags:
         - Admin
-        - Products
       security:
         - bearerAuth: []
       parameters:
@@ -1030,7 +1056,6 @@ paths:
       summary: Update product variant stock
       tags:
         - Admin
-        - Products
       security:
         - bearerAuth: []
       parameters:
@@ -1087,7 +1112,6 @@ paths:
       summary: Archive a product
       tags:
         - Admin
-        - Products
       security:
         - bearerAuth: []
       parameters:
@@ -1121,7 +1145,6 @@ paths:
       summary: Restore a product
       tags:
         - Admin
-        - Products
       security:
         - bearerAuth: []
       parameters:
@@ -1558,7 +1581,6 @@ paths:
       summary: Get all customers
       tags:
         - Admin
-        - Customers
       security:
         - bearerAuth: []
       parameters:
@@ -1601,7 +1623,6 @@ paths:
       summary: Get customer details
       tags:
         - Admin
-        - Customers
       security:
         - bearerAuth: []
       parameters:
@@ -1624,11 +1645,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete a customer
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Customer deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/customers/{id}/ban:
     patch:
       summary: Ban a customer
       tags:
         - Admin
-        - Customers
       security:
         - bearerAuth: []
       parameters:
@@ -1671,45 +1724,6 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Customer not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-    delete:
-      summary: Delete a customer
-      tags:
-        - Admin
-        - Customers
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: Customer deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Customer not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: Customer has linked orders and cannot be deleted
           content:
             application/json:
               schema:

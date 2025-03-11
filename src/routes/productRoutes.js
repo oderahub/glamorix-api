@@ -4,7 +4,7 @@ import { createProduct, updateProduct, deleteProduct, updateStock, archiveProduc
 import { productSchema, updateProductSchema } from '../validations/index.js';
 import { validateRequest } from '../middlewares/authValidate.js';
 //import {uploadImage} from '../middlewares/authValidate.js';
-import { Product, Category } from '../models/index.js';
+import { Product, Category, ProductVariant } from '../models/index.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { HTTP_STATUS_CODES, ERROR_MESSAGES, ROLES, PRODUCT_STATUS } from '../constants/constant.js';
 import { Op } from 'sequelize';
@@ -20,7 +20,7 @@ router.patch('/admin/products/:id/archive', authenticateToken, requireRole(ROLES
 router.patch('/admin/products/:id/restore', authenticateToken, requireRole(ROLES.ADMIN), restoreProduct);
 
 // Public product endpoints with pagination and filters
-router.get('/', async (req, res, next) => {
+router.get('/products', async (req, res, next) => {
     try {
         const { limit = 10, offset = 0, categoriesId, isActive = PRODUCT_STATUS.ACTIVE, minPrice, maxPrice, sort = 'createdAt_desc' } = req.query;
         const where = {};
@@ -36,7 +36,8 @@ router.get('/', async (req, res, next) => {
 
         const products = await Product.findAll({
             where,
-            include: [{ model: Category, as: 'categories', through: { attributes: [] } }],
+            include: [{ model: Category, as: 'categories', through: { attributes: [] } },
+            { model: ProductVariant, as: 'variants' }],
             limit: parseInt(limit),
             offset: parseInt(offset),
             order,
@@ -52,10 +53,11 @@ router.get('/', async (req, res, next) => {
     }
 });
 
-router.get('/:id', async (req, res, next) => {
+router.get('/products/:id', async (req, res, next) => {
     try {
         const product = await Product.findByPk(req.params.id, {
-            include: [{ model: Category, as: 'categories', through: { attributes: [] } }],
+            include: [{ model: Category, as: 'categories', through: { attributes: [] } },
+            { model: ProductVariant, as: 'variants' }],
             paranoid: false
         });
         if (!product) {
@@ -67,7 +69,7 @@ router.get('/:id', async (req, res, next) => {
     }
 });
 
-router.get('/category/:id', async (req, res, next) => {
+router.get('/products/category/:id', async (req, res, next) => {
     try {
         const { limit = 10, offset = 0, isActive = true, sort = 'createdAt_desc' } = req.query;
         let order = [['createdAt', 'DESC']];
@@ -81,7 +83,8 @@ router.get('/category/:id', async (req, res, next) => {
                 where: { id: req.params.id, ...(isActive ? { isActive } : {}) },
                 through: { attributes: [] },
                 paranoid: false
-            }],
+            },
+            { model: ProductVariant, as: 'variants' }],
             limit: parseInt(limit),
             offset: parseInt(offset),
             order

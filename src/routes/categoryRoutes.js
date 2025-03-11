@@ -9,8 +9,8 @@ import { uploadCategoryImage } from '../middlewares/authValidate.js';
 
 const router = express.Router();
 
-router.get('/', getAllCategories);
-router.get('/:id', getCategoryDetails);
+router.get('/categories', getAllCategories);
+router.get('/categories/:id', getCategoryDetails);
 router.post('/admin/categories', authenticateToken, requireRole(ROLES.ADMIN), uploadCategoryImage, validateRequest(categorySchema), createMainCategory);
 router.post('/admin/categories/:categoryId/sub', authenticateToken, requireRole(ROLES.ADMIN), uploadCategoryImage, validateRequest(categorySchema), createSubCategory);
 router.post('/admin/categories/:subCategoryId/sub', authenticateToken, requireRole(ROLES.ADMIN), uploadCategoryImage, validateRequest(categorySchema), createSubSubCategory);

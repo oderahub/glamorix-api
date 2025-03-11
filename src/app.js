@@ -33,9 +33,9 @@ app.get('/', (req, res) => {
 
 app.use('/api/auth', authRoute)
 app.use('/api/admin', adminRoute)
-app.use('/api/categories', categoryRoute)
+app.use('/api', categoryRoute)
 app.use('/api/orders', orderRoute)
-app.use('/api/products', productRoute)
+app.use('/api', productRoute)
 
 
 const swaggerDocument = YAML.parse(fs.readFileSync('./docs/openapi.yaml', 'utf8'));
