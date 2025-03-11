@@ -1,5 +1,5 @@
 import sequelize from '../config/database.js';
-import { Cart, CartItem, Product, ProductVariant, Order, OrderItem as OrderOrderItem, User } from '../models/index.js';
+import { Cart, CartItem, Product, ProductVariant, Order, OrderItem as OrderOrderItem, User, OrderItem } from '../models/index.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { HTTP_STATUS_CODES, ERROR_MESSAGES, ORDER_STATUS, CART_STATUS } from '../constants/constant.js';
 
@@ -160,28 +160,42 @@ export const checkout = async (req, res, next) => {
         shippingMethod,
         paymentMethod
     } = req.body;
+
     const t = await sequelize.transaction();
     try {
-        const cart = await Cart.findOne({ where: { userId: req.user.id, status: CART_STATUS.ACTIVE } });
+        const cart = await Cart.findOne({ where: { userId: req.user.id, status: CART_STATUS.ACTIVE }, transaction: t });
         if (!cart) throw new Error(ERROR_MESSAGES.CART_NOT_FOUND);
 
         const items = await CartItem.findAll({ where: { cartId: cart.id }, transaction: t });
         if (!items.length) throw new Error(ERROR_MESSAGES.CART_EMPTY);
 
+        const productIds = items.map(item => item.productId);
+        const variantIds = items.map(item => item.variantId).filter(Boolean);
+        const [products, variants, user] = await Promise.all([
+            Product.findAll({ where: { id: productIds }, transaction: t }),
+            ProductVariant.findAll({ where: { id: variantIds }, transaction: t }),
+            User.findByPk(req.user.id, { attributes: ['email'], transaction: t })
+        ]);
+
+        const productMap = new Map(products.map(product => [product.id, product]));
+        const variantMap = new Map(variants.map(variant => [variant.id, variant]));
+
         let subtotal = 0;
         for (const item of items) {
-            const product = await Product.findByPk(item.productId, { transaction: t });
-            if (product.stockQuantity < item.quantity) throw new Error(ERROR_MESSAGES.PRODUCT_INSUFFICIENT_STOCK);
-            subtotal += (item.variantId ? (await ProductVariant.findByPk(item.variantId, { transaction: t }))?.price || product.price : product.price) * item.quantity;
+            const product = productMap.get(item.productId);
+            const variant = item.variantId ? variantMap.get(item.variantId) : null;
+            if (!product || product.stockQuantity < item.quantity) throw new Error(ERROR_MESSAGES.PRODUCT_INSUFFICIENT_STOCK);
+            subtotal += (variant ? variant.price || product.price : product.price) * item.quantity;
         }
 
-        const tax = 0.0; // Customize
+        const tax = 0.0;
         const shippingCost = shippingMethod === 'free_shipping' ? 0.0 : 10.0;
         const totalAmount = subtotal + tax + shippingCost;
+        const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
         const order = await Order.create({
             userId: req.user.id,
-            orderNumber: null, // Auto-generated
+            orderNumber,
             status: ORDER_STATUS.PENDING,
             totalAmount,
             subtotal,
@@ -197,17 +211,13 @@ export const checkout = async (req, res, next) => {
             shippingPhone,
             shippingMethod,
             paymentMethod,
-            email: (await User.findByPk(req.user.id)).email
+            email: user.email
         }, { transaction: t });
 
-        const orderItems = await Promise.all(items.map(async item => {
-            const product = await Product.findByPk(item.productId, { transaction: t });
-            const variant = item.variantId ? await ProductVariant.findByPk(item.variantId, { transaction: t }) : null;
+        const orderItems = items.map(item => {
+            const product = productMap.get(item.productId);
+            const variant = item.variantId ? variantMap.get(item.variantId) : null;
             const unitPrice = variant ? variant.price || product.price : product.price;
-            await (variant ? ProductVariant : Product).update(
-                { stockQuantity: sequelize.literal(`stockQuantity - ${item.quantity}`) },
-                { where: { id: variant?.id || product.id }, transaction: t }
-            );
             return {
                 orderId: order.id,
                 productId: item.productId,
@@ -216,19 +226,30 @@ export const checkout = async (req, res, next) => {
                 unitPrice,
                 subtotal: unitPrice * item.quantity
             };
-        }));
+        });
 
         await OrderOrderItem.bulkCreate(orderItems, { transaction: t });
+
+        await Promise.all(items.map(({ productId, variantId, quantity }) =>
+            (variantId ? ProductVariant : Product).update(
+                { stockQuantity: sequelize.literal(`stockQuantity - ${quantity}`) },
+                { where: { id: variantId || productId }, transaction: t }
+            )
+        ));
+
         await Cart.update({ status: CART_STATUS.CONVERTED }, { where: { id: cart.id }, transaction: t });
         await CartItem.destroy({ where: { cartId: cart.id }, transaction: t });
 
         await t.commit();
-        return ApiResponse.success(res, 'Checkout successful', await Order.findByPk(order.id, { include: [{ model: OrderOrderItem, as: 'items' }] }), HTTP_STATUS_CODES.CREATED);
+        return ApiResponse.success(res, 'Checkout successful', await Order.findByPk(order.id, { include: [{ model: OrderItem, as: 'items' }] }), HTTP_STATUS_CODES.CREATED);
     } catch (error) {
         await t.rollback();
         next(error);
     }
 };
+
+
+
 
 // Helper function to get cart items
 async function getCartItems(cartId) {
