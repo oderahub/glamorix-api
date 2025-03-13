@@ -10,7 +10,7 @@ const logger = createLogger({
     _format.splat(),
     _format.json()
   ),
-  defaultMeta: { service: 'glamorix-api' },
+  defaultMeta: { service: 'Omorix-api' },
   transports: [
     new _transports.Console({
       format: _format.combine(

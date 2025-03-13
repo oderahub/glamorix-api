@@ -1,7 +1,7 @@
 {
-  "name": "glamorix-api",
+  "name": "Omorix-api",
   "version": "1.0.0",
-  "description": "The Glamorix backend powers a fashion e-commerce platform",
+  "description": "The Omorix backend powers a fashion e-commerce platform",
   "type": "module",
   "main": "index.js",
   "scripts": {

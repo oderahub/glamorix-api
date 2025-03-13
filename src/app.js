@@ -28,7 +28,7 @@ app.use(
 )
 
 app.get('/', (req, res) => {
-  res.send(`Welcome to the Glamorix API`)
+  res.send(`Welcome to the Omorix API`)
 })
 
 app.use('/api/auth', authRoute)

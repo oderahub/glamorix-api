@@ -53,11 +53,11 @@ const generateOtpEmailTemplate = (userName, otp) => {
     <body>
         <div class="container">
             <div class="header">
-                <img src="${EMAIL_CONFIG.LOGO_URL}" alt="Glamorix Logo">
+                <img src="${EMAIL_CONFIG.LOGO_URL}" alt="Omorix Logo">
             </div>
             <h1>Verify Your Account</h1>
             <p>Dear ${userName || 'Valued Customer'},</p>
-            <p>Thank you for joining Glamorix! Please verify your email by entering the code below:</p>
+            <p>Thank you for joining Omorix! Please verify your email by entering the code below:</p>
             <div class="otp-container">
                 <div class="otp-code">${otp}</div>
                 <div class="expiry">Expires in ${VALIDATION.OTP_EXPIRY_MINUTES} minutes</div>
