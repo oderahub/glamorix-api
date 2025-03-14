@@ -1,10 +1,10 @@
 openapi: 3.0.3
 info:
-  title: Glamorix API
-  description: API for the Glamorix e-commerce platform
+  title: Omorix API
+  description: API for the Omorix e-commerce platform
   version: 1.0.0
   contact:
-    email: support@glamorix.com
+    email: support@omorix.com
 servers:
   - url: http://localhost:3000/api
     description: Local development server
