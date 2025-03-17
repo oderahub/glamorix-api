@@ -1,5 +1,6 @@
 import Joi from 'joi'
 import { ERROR_MESSAGES, VALIDATION, PAYMENT_METHODS, SHIPPING_METHODS } from '../constants/constant.js'
+import { PRODUCT_STATUS } from '../constants/constant.js'
 
 // User Registration Validation Schema
 export const registerSchema = Joi.object({
@@ -103,7 +104,9 @@ export const productSchema = Joi.object({
     discountPercentage: Joi.number().integer().min(0).max(100).optional(),
     stockQuantity: Joi.number().integer().min(0).optional(), // Optional since variants handle stock
     sku: Joi.string().required(),
-    isActive: Joi.boolean().optional(),
+    isActive: Joi.string()
+        .valid(...Object.values(PRODUCT_STATUS))
+        .optional(),
     featuredImage: Joi.string().uri().optional(),
     categoryIds: Joi.array()
         .items(Joi.string().uuid().required())
@@ -130,13 +133,15 @@ export const updateProductSchema = Joi.object({
     discountPercentage: Joi.number().integer().min(0).max(100).optional(),
     stockQuantity: Joi.number().integer().min(0).optional(),
     sku: Joi.string().optional(),
-    isActive: Joi.boolean().optional(),
+    isActive: Joi.string()
+        .valid(...Object.values(PRODUCT_STATUS))
+        .optional(),
     featuredImage: Joi.string().uri().optional(),
 
     categoryIds: Joi.array()
         .items(Joi.string().uuid().required())
-        .min(1) // At least one category must be provided
-        .optional()
+        .min(1)
+        .required(),
 });
 
 export const categorySchema = Joi.object({

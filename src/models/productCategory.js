@@ -28,10 +28,15 @@ const ProductCategory = sequelize.define(
     isPrimary: {
       type: DataTypes.BOOLEAN,
       defaultValue: false
+    },
+    deletedAt: {
+      type: DataTypes.DATE,
+      allowNull: true
     }
   },
   {
     timestamps: true,
+    paranoid: true,
     indexes: [{ name: 'product_category_index', fields: ['productId', 'categoryId'], unique: true }]
   }
 )

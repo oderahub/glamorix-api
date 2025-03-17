@@ -1,10 +1,60 @@
-import { Product, ProductCategory, Category, ProductVariant } from '../models/index.js';
+import { Product, ProductCategory, Category, ProductVariant, ProductImage } from '../models/index.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { HTTP_STATUS_CODES, ERROR_MESSAGES, PRODUCT_STATUS } from '../constants/constant.js';
 import slugify from 'slugify';
 import sequelize from '../config/database.js';
 import { v4 as uuidv4 } from 'uuid';
 
+
+
+export const addProductImages = async (req, res, next) => {
+    const t = await sequelize.transaction();
+    try {
+        const { productId } = req.params;
+        const product = await Product.findByPk(productId, { paranoid: false });
+
+        if (!product) {
+            return ApiResponse.error(res, 'Product not found', 404);
+        }
+
+        if (!req.files || req.files.length === 0) {
+            return ApiResponse.error(res, 'No images uploaded', 400);
+        }
+
+        // Validate file size (e.g., max 5MB)
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+        const imageData = req.files.map((file, index) => {
+            if (file.size > MAX_FILE_SIZE) {
+                throw new Error(`File ${file.originalname} exceeds maximum size of 5MB`);
+            }
+
+            return {
+                id: uuidv4(),
+                productId: product.id,
+                imageData: file.buffer.toString('base64'),
+                mimeType: file.mimetype,
+                displayOrder: index,
+                isDefault: index === 0
+            };
+        });
+
+        await ProductImage.bulkCreate(imageData, {
+            transaction: t,
+            validate: true
+        });
+        await t.commit();
+
+        const result = await ProductImage.findAll({
+            where: { productId: product.id },
+            attributes: ['id', 'displayOrder', 'isDefault', 'createdAt', 'mimeType']
+        });
+
+        return ApiResponse.success(res, 'Product images added successfully', result);
+    } catch (error) {
+        await t.rollback();
+        next(error);
+    }
+};
 
 export const createProduct = async (req, res, next) => {
     const t = await sequelize.transaction();
@@ -20,10 +70,10 @@ export const createProduct = async (req, res, next) => {
             categoryIds = [],
             variants = []
         } = req.body;
-        const featuredImage = req.file ? req.file.buffer.toString('base64') : null;
 
         const slug = slugify(name, { lower: true, strict: true });
 
+        // Create product
         const product = await Product.create(
             {
                 name,
@@ -31,13 +81,36 @@ export const createProduct = async (req, res, next) => {
                 description,
                 price,
                 discountPercentage,
-                stockQuantity: 0,
+                stockQuantity: stockQuantity || 0,
                 sku,
-                isActive: isActive !== undefined ? isActive : PRODUCT_STATUS.ACTIVE,
-                featuredImage
+                isActive: isActive || PRODUCT_STATUS.ACTIVE,
+                featuredImage: req.files && req.files.length > 0 ? req.files[0].buffer.toString('base64') : null
             },
             { transaction: t }
         );
+
+        // Handle multiple images
+        if (req.files && req.files.length > 0) {
+            const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+            const imageData = req.files.map((file, index) => {
+                if (file.size > MAX_FILE_SIZE) {
+                    throw new Error(`File ${file.originalname} exceeds maximum size of 5MB`);
+                }
+
+                return {
+                    id: uuidv4(),
+                    productId: product.id,
+                    imageData: file.buffer.toString('base64'),
+                    mimeType: file.mimetype,
+                    displayOrder: index,
+                    isDefault: index === 0
+                };
+            });
+            await ProductImage.bulkCreate(imageData, {
+                transaction: t,
+                validate: true
+            });
+        }
 
         if (categoryIds.length > 0) {
             const productCategories = categoryIds.map(categoryId => ({
@@ -48,10 +121,9 @@ export const createProduct = async (req, res, next) => {
             await ProductCategory.bulkCreate(productCategories, { transaction: t });
         }
 
-        // Create variants dynamically
         if (variants.length > 0) {
             const variantData = variants.map((variant, index) => ({
-                id: uuidv4(), // Generate UUID using uuid library
+                id: uuidv4(),
                 productId: product.id,
                 size: variant.size || 'N/A',
                 color: variant.color || 'N/A',
@@ -70,10 +142,16 @@ export const createProduct = async (req, res, next) => {
         const result = await Product.findByPk(product.id, {
             include: [
                 { model: Category, as: 'categories', through: { attributes: [] } },
-                { model: ProductVariant, as: 'variants' }
+                { model: ProductVariant, as: 'variants' },
+                {
+                    model: ProductImage,
+                    as: 'images',
+                    attributes: ['id', 'displayOrder', 'isDefault', 'mimeType']
+                }
             ]
         });
-        return ApiResponse.success(res, 'Product created successfully', result, HTTP_STATUS_CODES.CREATED);
+
+        return ApiResponse.success(res, 'Product created successfully', result, 201);
     } catch (error) {
         await t.rollback();
         next(error);
@@ -202,3 +280,25 @@ export const restoreProduct = async (req, res, next) => {
         next(error);
     }
 };
+
+
+
+export const getProductImage = async (req, res, next) => {
+    try {
+        const { imageId } = req.params;
+        const image = await ProductImage.findByPk(imageId);
+
+        if (!image) {
+            return ApiResponse.error(res, 'Image not found', 404);
+        }
+
+        const imageBuffer = Buffer.from(image.imageData, 'base64');
+        res.set('Content-Type', image.mimeType);
+        res.set('Cache-Control', 'public, max-age=31557600'); // Cache for 1 year
+        return res.send(imageBuffer);
+    } catch (error) {
+        next(error);
+    }
+};
+
+

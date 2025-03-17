@@ -1,6 +1,6 @@
-# Glamorix API
+# Omorix API
 
-Welcome to the Glamorix API, a robust backend solution for the Glamorix e-commerce platform. This API provides endpoints for user authentication, product management, order processing, category management, cart functionality, and customer administration, designed to support an online clothing store with admin and customer interfaces.
+Welcome to the Omorix API, a robust backend solution for the Omorix e-commerce platform. This API provides endpoints for user authentication, product management, order processing, category management, cart functionality, and customer administration, designed to support an online clothing store with admin and customer interfaces.
 
 ## Table of Contents
 
@@ -18,7 +18,7 @@ Welcome to the Glamorix API, a robust backend solution for the Glamorix e-commer
 
 ## Overview
 
-The Glamorix API is built using Node.js, Express, and Sequelize with a PostgreSQL database. It follows a RESTful architecture and includes JWT-based authentication for secure access. The API is designed to support both customer-facing features (e.g., shopping cart, order placement) and admin functionalities (e.g., product management, customer banning).
+The Omorix API is built using Node.js, Express, and Sequelize with a PostgreSQL database. It follows a RESTful architecture and includes JWT-based authentication for secure access. The API is designed to support both customer-facing features (e.g., shopping cart, order placement) and admin functionalities (e.g., product management, customer banning).
 
 ## Features
 
@@ -45,8 +45,8 @@ The Glamorix API is built using Node.js, Express, and Sequelize with a PostgreSQ
 1. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/your-username/glamorix-api.git
-   cd glamorix-api
+   git clone https://github.com/your-username/Omorix-api.git
+   cd Omorix-api
    ```
 
 2. **Install dependencies**:
@@ -82,11 +82,11 @@ Open phpMyAdmin (http://localhost:8888/phpmyadmin).
 
 Log in with root/root.
 
-Create glamorix_db.
+Create Omorix_db.
 
 Set DATABASE_URL:
 
-DATABASE_URL=mysql://root:root@localhost:8889/glamorix_db
+DATABASE_URL=mysql://root:root@localhost:8889/Omorix_db
 
 ## Troubleshooting Connection Issues
 
@@ -141,10 +141,10 @@ Reinstall MAMP if unresolved.
 ### Example Workflow
 
 1. **Register an admin user**:
-   POST `/api/auth/register` with `{ "email": "admin@glamorix.com", "password": "admin123", "role": "admin" }`.
+   POST `/api/auth/register` with `{ "email": "admin@Omorix.com", "password": "admin123", "role": "admin" }`.
 
 2. **Login to get a token**:
-   POST `/api/auth/login` with `{ "email": "admin@glamorix.com", "password": "admin123" }`.
+   POST `/api/auth/login` with `{ "email": "admin@Omorix.com", "password": "admin123" }`.
 
 3. **Create a category**:
    POST `/api/admin/categories` with `{ "name": "Tuxedos", "slug": "tuxedos" }` using the token.
@@ -177,7 +177,7 @@ Create a `.env` file with the following variables:
 
 - `PORT`: Server port (default: 3000)
 - `SWAGGER_PORT`: Swagger UI port (default: 3001)
-- `DATABASE_URL`: PostgreSQL connection string (e.g., `postgres://user:password@localhost:5432/glamorix_db`)
+- `DATABASE_URL`: PostgreSQL connection string (e.g., `postgres://user:password@localhost:5432/Omorix_db`)
 - `JWT_SECRET`: Secret key for JWT signing
 - `EMAIL_USER`: Email account for OTP sending
 - `EMAIL_PASS`: Email password or app-specific password
@@ -187,7 +187,7 @@ Example `.env.example`:
 ```
 PORT=3000
 SWAGGER_PORT=3001
-DATABASE_URL=postgres://user:password@localhost:5432/glamorix_db
+DATABASE_URL=postgres://user:password@localhost:5432/Omorix_db
 JWT_SECRET=your-secure-secret-key
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASS=your-app-specific-password
@@ -234,5 +234,5 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 ## Contact
 
-- Email: support@glamorix.com
+- Email: support@Omorix.com
 - GitHub:
