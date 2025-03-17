@@ -23,13 +23,13 @@ export const register = async (req, res, next) => {
     );
 
     // In your register function
-    const cleanPhone = phone ? phone.replace(/\D/g, '') : null;
-    await Customer.create(
-      { userId: user.id, firstName, lastName, phone: cleanPhone },
-      { transaction: t },
-    );
+    //  const cleanPhone = phone ? phone.replace(/\D/g, '') : null;
+    // await Customer.create(
+    //   { userId: user.id, firstName, lastName, phone: cleanPhone },
+    //   { transaction: t },
+    // );
 
-    // await Customer.create({ userId: user.id, firstName, lastName, phone }, { transaction: t });
+    await Customer.create({ userId: user.id, firstName, lastName, phone }, { transaction: t });
     await t.commit();
     const result = await generateAndSendOtp(user.id);
     return ApiResponse.success(res, result.message, { userId: user.id }, HTTP_STATUS_CODES.CREATED);
