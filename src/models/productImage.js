@@ -17,8 +17,12 @@ const ProductImage = sequelize.define(
         key: 'id'
       }
     },
-    url: {
-      type: DataTypes.STRING,
+    imageData: {
+      type: DataTypes.TEXT('long'),
+      allowNull: true
+    },
+    mimeType: {
+      type: DataTypes.STRING(50),
       allowNull: false
     },
     displayOrder: {
@@ -32,7 +36,12 @@ const ProductImage = sequelize.define(
   },
   {
     timestamps: true,
-    paranoid: true
+    paranoid: true,
+    indexes: [  // Added indexes for better query performance
+      {
+        fields: ['productId']
+      }
+    ]
   }
 )
 

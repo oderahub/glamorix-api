@@ -50,7 +50,7 @@ const Product = sequelize.define(
       defaultValue: PRODUCT_STATUS.ACTIVE
     },
     featuredImage: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: true
     }
   },

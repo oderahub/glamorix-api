@@ -7,6 +7,7 @@ import {
   updateStock,
   archiveProduct,
   restoreProduct,
+  addProductImages,
 } from '../controllers/productController.js';
 import { productSchema, updateProductSchema } from '../validations/index.js';
 import { validateRequest } from '../middlewares/authValidate.js';
@@ -17,13 +18,55 @@ import ApiResponse from '../utils/ApiResponse.js';
 import { HTTP_STATUS_CODES, ERROR_MESSAGES, ROLES, PRODUCT_STATUS } from '../constants/constant.js';
 import { Op } from 'sequelize';
 import Joi from 'joi';
+import multer from 'multer';
+import { getProductImage } from '../controllers/productController.js';
+import { parseMultipartArrays } from '../utils/helper.js';
+
 
 const router = express.Router();
+
+
+
+
+
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+    files: 10 // Max 10 files
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!allowedTypes.includes(file.mimetype)) {
+      return cb(new Error('Only JPEG, PNG, and GIF images are allowed'));
+    }
+    cb(null, true);
+  }
+});
+
+
+
+
+// Add this route
+router.post(
+  '/admin/products/:productId/images',
+  authenticateToken,
+  requireRole(ROLES.ADMIN),
+  upload.array('images', 10), // Allow up to 10 images per upload
+  addProductImages
+);
+
+
+router.get('/products/images/:imageId', getProductImage);
+
 
 router.post(
   '/admin/products',
   authenticateToken,
   requireRole(ROLES.ADMIN),
+  upload.array('images', 10),
+  parseMultipartArrays,
   validateRequest(productSchema),
   createProduct,
 );
@@ -31,6 +74,8 @@ router.patch(
   '/admin/products/:id',
   authenticateToken,
   requireRole(ROLES.ADMIN),
+  upload.array('images', 10),
+  parseMultipartArrays,
   validateRequest(updateProductSchema),
   updateProduct,
 );
