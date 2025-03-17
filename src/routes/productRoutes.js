@@ -13,6 +13,7 @@ import { validateRequest } from '../middlewares/authValidate.js';
 //import {uploadImage} from '../middlewares/authValidate.js';
 import { Product, Category, ProductVariant } from '../models/index.js';
 import ApiResponse from '../utils/ApiResponse.js';
+
 import { HTTP_STATUS_CODES, ERROR_MESSAGES, ROLES, PRODUCT_STATUS } from '../constants/constant.js';
 import { Op } from 'sequelize';
 import Joi from 'joi';
