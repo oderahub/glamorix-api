@@ -122,6 +122,41 @@ components:
         updatedAt:
           type: string
           format: date-time
+    ProductImage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        imageData:
+          type: string
+          format: base64
+        mimeType:
+          type: string
+        displayOrder:
+          type: integer
+        isDefault:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ProductImageUpdate:
+      type: object
+      properties:
+        displayOrder:
+          type: integer
+          minimum: 0
+        isDefault:
+          type: boolean
+      required:
+        - displayOrder
+        - isDefault
     Product:
       type: object
       properties:
@@ -160,6 +195,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProductVariant'
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImage'
         createdAt:
           type: string
           format: date-time
@@ -601,39 +640,39 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
   /auth/change-password:
-  post:
-    summary: Change user password
-    tags:
-      - Authentication
-    security:
-      - bearerAuth: []
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              oldPassword:
-                type: string
-              newPassword:
-                type: string
-            required:
-              - oldPassword
-              - newPassword
-    responses:
-      '200':
-        description: Password changed successfully
+    post:
+      summary: Change user password
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ApiResponse'
-      '400':
-        description: Invalid old password
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Error'
+              type: object
+              properties:
+                oldPassword:
+                  type: string
+                newPassword:
+                  type: string
+              required:
+                - oldPassword
+                - newPassword
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid old password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /admin/categories:
     post:
       summary: Create a main category
@@ -846,13 +885,11 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               properties:
                 name:
-                  type: string
-                slug:
                   type: string
                 description:
                   type: string
@@ -866,16 +903,28 @@ paths:
                   description: Always 0, stock managed by ProductVariant
                 sku:
                   type: string
+                slug:
+                  type: string
+                  description: unique slug for SEO
                 isActive:
-                  type: boolean
+                  type: string
+                  enum:
+                    - active
+                    - inactive
+                    - archived
+                    - restored
+                    - draft
+                  default: active
                 categoryIds:
                   type: array
                   items:
                     type: string
                     format: uuid
-                featuredImage:
-                  type: string
-                  format: binary
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
                 variants:
                   type: array
                   items:
@@ -941,7 +990,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               properties:
@@ -961,15 +1010,24 @@ paths:
                 sku:
                   type: string
                 isActive:
-                  type: boolean
+                  type: string
+                  enum:
+                    - active
+                    - inactive
+                    - archived
+                    - restored
+                    - draft
+                  default: active
                 categoryIds:
                   type: array
                   items:
                     type: string
                     format: uuid
-                featuredImage:
-                  type: string
-                  format: binary
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
                 variants:
                   type: array
                   items:
@@ -1173,6 +1231,139 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /admin/products/{productId}/images:
+    post:
+      summary: Add images to a product
+      tags:
+        - Admin
+        - Products
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+              required:
+                - images
+      responses:
+        '201':
+          description: Images added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/products/images/{imageId}:
+    delete:
+      summary: Delete a product image
+      tags:
+        - Admin
+        - Products
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Image deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      summary: Update product image order and default status
+      tags:
+        - Admin
+        - Products
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductImageUpdate'
+      responses:
+        '200':
+          description: Image updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /products:
     get:
       summary: Get all products
@@ -1298,6 +1489,33 @@ paths:
                 $ref: '#/components/schemas/ApiResponse'
         '404':
           description: Products or category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /products/images/{imageId}:
+    get:
+      summary: Get product image
+      tags:
+        - Public
+        - Products
+      parameters:
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Image retrieved successfully
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Image not found
           content:
             application/json:
               schema:
