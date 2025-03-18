@@ -1,5 +1,5 @@
-import { DataTypes } from 'sequelize'
-import sequelize from '../config/database.js'
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
 
 const Customer = sequelize.define(
   'Customer',
@@ -7,7 +7,7 @@ const Customer = sequelize.define(
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
+      primaryKey: true,
     },
     userId: {
       type: DataTypes.UUID,
@@ -15,37 +15,45 @@ const Customer = sequelize.define(
       unique: true,
       references: {
         model: 'Users',
-        key: 'id'
-      }
+        key: 'id',
+      },
     },
     firstName: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
     },
     lastName: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
     },
     phone: {
       type: DataTypes.STRING,
       allowNull: true,
       validate: {
-        isNumeric: true
-      }
+        isNumeric: true,
+      },
     },
+
+    // phone: {
+    //   type: DataTypes.STRING,
+    //   allowNull: true,
+    //   validate: {
+    //     is: /^[+0-9]+$/, // Allows digits and + character
+    //   },
+    // },
     address: {
       type: DataTypes.TEXT,
-      allowNull: true
-    }
+      allowNull: true,
+    },
   },
   {
     timestamps: true,
     paranoid: true,
     indexes: [
       { name: 'user_index', fields: ['userId'], unique: true },
-      { name: 'name_index', fields: ['firstName', 'lastName'] }
-    ]
-  }
-)
+      { name: 'name_index', fields: ['firstName', 'lastName'] },
+    ],
+  },
+);
 
-export default Customer
+export default Customer;
