@@ -30,17 +30,9 @@ const Customer = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
       validate: {
-        isNumeric: true,
+        is: /^[+0-9]+$/,
       },
     },
-
-    // phone: {
-    //   type: DataTypes.STRING,
-    //   allowNull: true,
-    //   validate: {
-    //     is: /^[+0-9]+$/, // Allows digits and + character
-    //   },
-    // },
     address: {
       type: DataTypes.TEXT,
       allowNull: true,
