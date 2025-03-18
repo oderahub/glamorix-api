@@ -6,81 +6,31 @@ import { generateAndSendOtp, verifyOtp } from '../services/authService.js';
 import jwt from 'jsonwebtoken';
 import argon2 from 'argon2';
 
-// export const register = async (req, res, next) => {
-//   const { email, password, firstName, lastName, phone, role } = req.body;
-//   const t = await sequelize.transaction();
-//   try {
-//     // Assign role dynamically, defaulting to CUSTOMER if not provided
-//     const userRole = role || ROLES.CUSTOMER;
+export const register = async (req, res, next) => {
+  const { email, password, firstName, lastName, phone, role } = req.body;
+  const t = await sequelize.transaction();
+  try {
+    // Assign role dynamically, defaulting to CUSTOMER if not provided
+    const userRole = role || ROLES.CUSTOMER;
 
-//     const user = await User.create(
-//       {
-//         email,
-//         password,
-//         role: userRole,
-//       },
-//       { transaction: t },
-//     );
+    const user = await User.create(
+      {
+        email,
+        password,
+        role: userRole,
+      },
+      { transaction: t },
+    );
 
-//     // In your register function
-//     //  const cleanPhone = phone ? phone.replace(/\D/g, '') : null;
-//     // await Customer.create(
-//     //   { userId: user.id, firstName, lastName, phone: cleanPhone },
-//     //   { transaction: t },
-//     // );
-
-//     await Customer.create({ userId: user.id, firstName, lastName, phone }, { transaction: t });
-//     await t.commit();
-//     const result = await generateAndSendOtp(user.id);
-//     return ApiResponse.success(res, result.message, { userId: user.id }, HTTP_STATUS_CODES.CREATED);
-//   } catch (error) {
-//     await t.rollback();
-//     next(error);
-//   }
-// };
-
-// export const register = async (req, res, next) => {
-//   const { email, password, firstName, lastName, phone, role } = req.body;
-//   const t = await sequelize.transaction();
-//   try {
-//     // Assign role dynamically, defaulting to CUSTOMER if not provided
-//     const userRole = role || ROLES.CUSTOMER;
-
-//     const user = await User.create(
-//       {
-//         email,
-//         password,
-//         role: userRole,
-//       },
-//       { transaction: t },
-//     );
-
-//     await Customer.create({ userId: user.id, firstName, lastName, phone }, { transaction: t });
-
-//     let result;
-//     try {
-//       // Try to generate and send OTP before committing transaction
-//       result = await generateAndSendOtp(user.id);
-//     } catch (emailError) {
-//       console.error('Failed to send OTP email:', emailError);
-//       result = {
-//         message:
-//           "User registered successfully, but verification email couldn't be sent. Please try again later.",
-//       };
-//     }
-
-//     // Commit transaction after handling potential email errors
-//     await t.commit();
-
-//     return ApiResponse.success(res, result.message, { userId: user.id }, HTTP_STATUS_CODES.CREATED);
-//   } catch (error) {
-//     // Only roll back if the transaction hasn't been committed yet
-//     if (t && !t.finished) {
-//       await t.rollback();
-//     }
-//     next(error);
-//   }
-// };
+    await Customer.create({ userId: user.id, firstName, lastName, phone }, { transaction: t });
+    await t.commit();
+    const result = await generateAndSendOtp(user.id);
+    return ApiResponse.success(res, result.message, { userId: user.id }, HTTP_STATUS_CODES.CREATED);
+  } catch (error) {
+    await t.rollback();
+    next(error);
+  }
+};
 
 export const verifyOtpHandler = async (req, res, next) => {
   const { userId, otp } = req.body;

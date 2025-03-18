@@ -9,14 +9,15 @@ export const registerSchema = Joi.object({
         'any.required': ERROR_MESSAGES.VALIDATION_ERROR
     }),
     password: Joi.string()
-        .pattern(VALIDATION.PASSWORD_REGEX)
         .min(VALIDATION.PASSWORD_MIN_LENGTH)
+        .pattern(VALIDATION.PASSWORD_REGEX)
         .required()
         .messages({
-            'string.pattern.base': ERROR_MESSAGES.PASSWORD_TOO_WEAK,
-            'string.min': ERROR_MESSAGES.PASSWORD_TOO_WEAK,
+            'string.min': `Password must be at least ${VALIDATION.PASSWORD_MIN_LENGTH} characters long.`,
+            'string.pattern.base': 'Password must include at least one uppercase letter, one number, and one special character.',
             'any.required': ERROR_MESSAGES.VALIDATION_ERROR
         }),
+
     firstName: Joi.string().min(2).max(50).required().messages({
         'string.min': ERROR_MESSAGES.INVALID_USER_DATA,
         'string.max': ERROR_MESSAGES.INVALID_USER_DATA,
@@ -28,8 +29,8 @@ export const registerSchema = Joi.object({
         'any.required': ERROR_MESSAGES.VALIDATION_ERROR
     }),
     phone: Joi.string().pattern(VALIDATION.PHONE_REGEX).required().messages({
-        'string.pattern.base': ERROR_MESSAGES.INVALID_USER_DATA,
-        'any.required': ERROR_MESSAGES.VALIDATION_ERROR
+        'string.pattern.base': 'Phone number must be in a valid format (e.g., +1234567890)',
+        'any.required': 'Phone number is required'
     }),
     role: Joi.string().valid('admin', 'customer').optional()
 })
