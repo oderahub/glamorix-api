@@ -6,7 +6,7 @@ info:
   contact:
     email: support@omorix.com
 servers:
-  - url: https://glamorix-api.onrender.com
+  - url: https://glamorix-api.onrender.com/api
     description: Production Server
 components:
   securitySchemes:
