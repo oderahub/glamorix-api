@@ -33,7 +33,7 @@ function keepAlive(url) {
 
 // Schedule a job to keep the server alive
 cron.schedule('*/5 * * * *', () => {
-    keepAlive('https://omorix-backend.onrender.com');
+    keepAlive('https://glamorix-api.onrender.com');
     logger.info('Pinged the server every 5 minutes');
 });
 
