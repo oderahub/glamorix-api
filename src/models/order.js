@@ -1,6 +1,7 @@
-import { DataTypes } from 'sequelize'
-import sequelize from '../config/database.js'
-import { ORDER_STATUS, PAYMENT_STATUS, SHIPPING_METHODS, PAYMENT_METHODS } from '../constants/constant.js'
+
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
+import { ORDER_STATUS, PAYMENT_STATUS, SHIPPING_METHODS, PAYMENT_METHODS } from '../constants/constant.js';
 
 const Order = sequelize.define(
     'Order',
@@ -12,7 +13,7 @@ const Order = sequelize.define(
         },
         userId: {
             type: DataTypes.UUID,
-            allowNull: false,
+            allowNull: true, // Allow null for guest orders
             references: {
                 model: 'Users',
                 key: 'id'
@@ -40,7 +41,7 @@ const Order = sequelize.define(
             allowNull: true,
             defaultValue: 0.0
         },
-        shippingCost: {
+        deliveryFee: {
             type: DataTypes.DECIMAL(10, 2),
             allowNull: true,
             defaultValue: 0.0
@@ -51,27 +52,31 @@ const Order = sequelize.define(
             defaultValue: 0.0
         },
         // Shipping information
-        shippingFirstName: {
+        firstName: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        shippingLastName: {
+        lastName: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        shippingAddress: {
+        deliveryAddress: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        shippingCity: {
+        city: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        shippingZip: {
+        postCode: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        shippingPhone: {
+        country: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        phone: {
             type: DataTypes.STRING,
             allowNull: true
         },
@@ -89,21 +94,21 @@ const Order = sequelize.define(
             allowNull: true,
             defaultValue: SHIPPING_METHODS.STANDARD
         },
-        // Paystack related fields
+        // PayPal related fields
         paymentMethod: {
             type: DataTypes.ENUM(...Object.values(PAYMENT_METHODS)),
             allowNull: false,
-            defaultValue: PAYMENT_METHODS.PAYSTACK
+            defaultValue: PAYMENT_METHODS.PAYPAL
         },
         paymentStatus: {
             type: DataTypes.ENUM(...Object.values(PAYMENT_STATUS)),
             defaultValue: PAYMENT_STATUS.PENDING
         },
-        paystackReference: {
+        paypalOrderId: { // PayPal Order ID
             type: DataTypes.STRING,
             allowNull: true
         },
-        paystackTransactionId: {
+        paypalPaymentId: { // PayPal Payment ID (after capturing the order)
             type: DataTypes.STRING,
             allowNull: true
         },
@@ -155,10 +160,9 @@ const Order = sequelize.define(
             { name: 'order_status_index', fields: ['status'] },
             { name: 'order_payment_status_index', fields: ['paymentStatus'] },
             { name: 'order_tracking_index', fields: ['trackingNumber'] },
-            { name: 'order_paystack_reference', fields: ['paystackReference'] }
+            { name: 'order_paypal_order_id', fields: ['paypalOrderId'] } // Updated index
         ]
-        // Removed the beforeCreate hook since we're now handling order number generation in the controller
     }
-)
+);
 
-export default Order
+export default Order;

@@ -7,6 +7,7 @@ import orderRoute from './routes/orderRoutes.js'
 import adminRoute from './routes/adminRoutes.js'
 import categoryRoute from './routes/categoryRoutes.js'
 import productRoute from './routes/productRoutes.js'
+import addressRoutes from './routes/addressRoutes.js'
 import { errorHandler } from './middlewares/error-handler.js'
 import swaggerUi from 'swagger-ui-express';
 import fs from 'fs';
@@ -36,6 +37,7 @@ app.use('/api/admin', adminRoute)
 app.use('/api', categoryRoute)
 app.use('/api/orders', orderRoute)
 app.use('/api', productRoute)
+app.use('/api/addresses', addressRoutes)
 
 
 const swaggerDocument = YAML.parse(fs.readFileSync('./docs/openapi.yaml', 'utf8'));

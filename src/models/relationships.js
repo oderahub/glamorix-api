@@ -11,6 +11,7 @@ import OrderItem from './orderItem.js'
 import Cart from './cart.js'
 import CartItem from './cartItem.js'
 import AdminLog from './adminLog.js'
+import Address from './address.js'
 
 // Category self-referencing relationship
 Category.belongsTo(Category, { as: 'parent', foreignKey: 'parentId' })
@@ -74,6 +75,11 @@ CartItem.belongsTo(ProductVariant, { foreignKey: 'variantId', as: 'variant' })
 User.hasMany(AdminLog, { foreignKey: 'userId', as: 'adminLogs' })
 AdminLog.belongsTo(User, { foreignKey: 'userId' })
 
+// Address 
+// Address associations
+User.hasMany(Address, { foreignKey: 'userId' });
+Address.belongsTo(User, { foreignKey: 'userId' });
+
 export {
     User,
     Customer,
@@ -88,4 +94,5 @@ export {
     Cart,
     CartItem,
     AdminLog,
+    Address
 }

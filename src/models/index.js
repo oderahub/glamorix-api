@@ -10,7 +10,8 @@ import {
   Order,
   OrderItem,
   Cart,
-  CartItem
+  CartItem,
+  Address
 } from './relationships.js'
 
 export {
@@ -25,5 +26,6 @@ export {
   Order,
   OrderItem,
   Cart,
-  CartItem
+  CartItem,
+  Address
 }
