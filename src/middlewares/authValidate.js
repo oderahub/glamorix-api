@@ -1,8 +1,6 @@
 import { HTTP_STATUS_CODES, ERROR_MESSAGES } from '../constants/constant.js';
 import multer from 'multer';
 
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
 
 export const validateRequest = (schema) => {
   return (req, res, next) => {
@@ -23,5 +21,19 @@ export const validateRequest = (schema) => {
 };
 
 
-export const uploadCategoryImage = upload.single('image');
-// export const uploadImage = upload.single('featuredImage')
+
+const storage = multer.memoryStorage();
+export const uploadCategoryImage = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+    files: 1 // Only one image for category banner
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!allowedTypes.includes(file.mimetype)) {
+      return cb(new Error('Only JPEG, PNG, and GIF images are allowed'));
+    }
+    cb(null, true);
+  }
+}).single('image'); // Expect a single file with field name 'image'

@@ -1,7 +1,7 @@
 import sequelize from '../config/database.js';
 import { Cart, CartItem, Product, ProductVariant, Order, OrderItem as OrderOrderItem, User, OrderItem } from '../models/index.js';
 import ApiResponse from '../utils/ApiResponse.js';
-import { HTTP_STATUS_CODES, ERROR_MESSAGES, ORDER_STATUS, CART_STATUS, PAYMENT_METHODS, SHIPPING_METHODS } from '../constants/constant.js';
+import { HTTP_STATUS_CODES, ERROR_MESSAGES, ORDER_STATUS, CART_STATUS, PAYMENT_METHODS, SHIPPING_METHODS, PAYMENT_STATUS } from '../constants/constant.js';
 import { sendOrderConfirmationEmail } from '../services/emailService.js';
 
 export const getCart = async (req, res, next) => {
@@ -355,21 +355,47 @@ export const checkout = async (req, res, next) => {
         city,
         postCode,
         country,
-        // Add paymentMethod here
-    } = req.body;   // Updated field name
+        paymentMethod: rawPaymentMethod, // Destructure paymentMethod
+        shippingMethod = SHIPPING_METHODS.STANDARD // Default shipping method
+    } = req.body;
 
     const t = await sequelize.transaction();
     try {
         let cart;
         let userEmail;
 
+        // Validate paymentMethod
+        const validPaymentMethods = Object.values(PAYMENT_METHODS);
+        const paymentMethod = validPaymentMethods.includes(rawPaymentMethod)
+            ? rawPaymentMethod
+            : (PAYMENT_METHODS.PAYPAL || 'paypal'); // Fallback to 'paypal' if undefined
+
+        if (!validPaymentMethods.includes(rawPaymentMethod)) {
+            console.warn(`Invalid payment method "${rawPaymentMethod}" provided. Defaulting to "${PAYMENT_METHODS.PAYPAL || 'paypal'}".`);
+        }
+
         // Check if the user is authenticated or a guest
         if (req.user) {
             cart = await Cart.findOne({ where: { userId: req.user.id, status: CART_STATUS.ACTIVE }, transaction: t });
+            if (!cart) {
+                cart = await Cart.create({
+                    userId: req.user.id,
+                    status: CART_STATUS.ACTIVE,
+                    expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                }, { transaction: t });
+            }
             const user = await User.findByPk(req.user.id, { attributes: ['email'], transaction: t });
             userEmail = user.email;
         } else {
-            cart = await Cart.findOne({ where: { sessionId: req.session?.id || 'guest-session', status: CART_STATUS.ACTIVE }, transaction: t });
+            const sessionId = req.session?.id || 'guest-session';
+            cart = await Cart.findOne({ where: { sessionId, status: CART_STATUS.ACTIVE }, transaction: t });
+            if (!cart) {
+                cart = await Cart.create({
+                    sessionId,
+                    status: CART_STATUS.ACTIVE,
+                    expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                }, { transaction: t });
+            }
             if (!email) {
                 throw new Error('Email is required for guest checkout');
             }
@@ -392,11 +418,30 @@ export const checkout = async (req, res, next) => {
         const variantMap = new Map(variants.map(variant => [variant.id, variant]));
 
         let subtotal = 0;
+        const orderItemsDetails = [];
         for (const item of items) {
             const product = productMap.get(item.productId);
             const variant = item.variantId ? variantMap.get(item.variantId) : null;
             if (!product || product.stockQuantity < item.quantity) throw new Error(ERROR_MESSAGES.PRODUCT_INSUFFICIENT_STOCK);
-            subtotal += (variant ? variant.price || product.price : product.price) * item.quantity;
+
+            // Log the price values for debugging
+            console.log(`Product ID: ${item.productId}, Product Price: ${product.price}, Variant Price: ${variant?.price}`);
+
+            const unitPriceRaw = variant ? variant.price || product.price : product.price;
+            const unitPrice = parseFloat(unitPriceRaw) || 0; // Convert to number, default to 0 if invalid
+
+            if (isNaN(unitPrice)) {
+                console.error(`Invalid unitPrice for product ID ${item.productId}: ${unitPriceRaw}`);
+                throw new Error('Invalid price for product');
+            }
+
+            subtotal += unitPrice * item.quantity;
+            orderItemsDetails.push({
+                name: product.name,
+                quantity: item.quantity,
+                unitPrice: unitPrice.toFixed(2),
+                total: (unitPrice * item.quantity).toFixed(2)
+            });
         }
 
         const tax = 0.0;
@@ -404,6 +449,7 @@ export const checkout = async (req, res, next) => {
         const totalAmount = subtotal + tax + deliveryFee;
         const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
+        // Create the order in the database
         const order = await Order.create({
             userId: req.user?.id || null, // Null for guests
             orderNumber,
@@ -411,7 +457,7 @@ export const checkout = async (req, res, next) => {
             totalAmount,
             subtotal,
             tax,
-            deliveryFee, // Updated field name
+            deliveryFee,
             firstName,
             lastName,
             deliveryAddress,
@@ -419,13 +465,19 @@ export const checkout = async (req, res, next) => {
             postCode,
             country,
             phone,
-            email: userEmail // Store the email (either from user or guest)
+            paymentMethod, // Use the validated paymentMethod
+            paymentStatus: PAYMENT_STATUS.PENDING,
+            shippingMethod,
+            email: userEmail,
+            processedAt: new Date()
         }, { transaction: t });
 
         const orderItems = items.map(item => {
             const product = productMap.get(item.productId);
             const variant = item.variantId ? variantMap.get(item.variantId) : null;
-            const unitPrice = variant ? variant.price || product.price : product.price;
+            const unitPriceRaw = variant ? variant.price || product.price : product.price;
+            const unitPrice = parseFloat(unitPriceRaw) || 0;
+
             return {
                 orderId: order.id,
                 productId: item.productId,
@@ -440,7 +492,7 @@ export const checkout = async (req, res, next) => {
 
         await Promise.all(items.map(({ productId, variantId, quantity }) =>
             (variantId ? ProductVariant : Product).update(
-                { stockQuantity: sequelize.literal(`stockQuantity - ${quantity}`) },
+                { stockQuantity: sequelize.literal(`"stockQuantity" - ${quantity}`) }, // Use quoted column name
                 { where: { id: variantId || productId }, transaction: t }
             )
         ));
@@ -452,7 +504,11 @@ export const checkout = async (req, res, next) => {
         await sendOrderConfirmationEmail(userEmail, order, orderItems);
 
         await t.commit();
-        return ApiResponse.success(res, 'Checkout successful', await Order.findByPk(order.id, { include: [{ model: OrderItem, as: 'items' }] }), HTTP_STATUS_CODES.CREATED);
+
+        // Return a simple success response
+        return ApiResponse.success(res, 'Checkout successful', {
+            orderId: order.id
+        }, HTTP_STATUS_CODES.CREATED);
     } catch (error) {
         await t.rollback();
         next(error);

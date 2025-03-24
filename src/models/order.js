@@ -30,26 +30,46 @@ const Order = sequelize.define(
         },
         totalAmount: {
             type: DataTypes.DECIMAL(10, 2),
-            allowNull: false
+            allowNull: false,
+            get() {
+                const value = this.getDataValue('totalAmount');
+                return value === null ? null : parseFloat(value);
+            }
         },
         subtotal: {
             type: DataTypes.DECIMAL(10, 2),
-            allowNull: false
+            allowNull: false,
+            get() {
+                const value = this.getDataValue('subtotal');
+                return value === null ? null : parseFloat(value);
+            }
         },
         tax: {
             type: DataTypes.DECIMAL(10, 2),
             allowNull: true,
-            defaultValue: 0.0
+            defaultValue: 0.0,
+            get() {
+                const value = this.getDataValue('tax');
+                return value === null ? null : parseFloat(value);
+            }
         },
         deliveryFee: {
             type: DataTypes.DECIMAL(10, 2),
             allowNull: true,
-            defaultValue: 0.0
+            defaultValue: 0.0,
+            get() {
+                const value = this.getDataValue('deliveryFee');
+                return value === null ? null : parseFloat(value);
+            }
         },
         discount: {
             type: DataTypes.DECIMAL(10, 2),
             allowNull: true,
-            defaultValue: 0.0
+            defaultValue: 0.0,
+            get() {
+                const value = this.getDataValue('discount');
+                return value === null ? null : parseFloat(value);
+            }
         },
         // Shipping information
         firstName: {

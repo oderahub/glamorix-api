@@ -38,7 +38,8 @@ const Product = sequelize.define(
     stockQuantity: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: 0
+      defaultValue: 0,
+      field: 'stockQuantity'
     },
     sku: {
       type: DataTypes.STRING,

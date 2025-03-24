@@ -83,7 +83,7 @@ export const createProduct = async (req, res, next) => {
                 discountPercentage,
                 stockQuantity: stockQuantity || 0,
                 sku,
-                isActive: isActive || PRODUCT_STATUS.ACTIVE,
+                isActive: PRODUCT_STATUS.ACTIVE,
                 featuredImage: req.files && req.files.length > 0 ? req.files[0].buffer.toString('base64') : null
             },
             { transaction: t }
