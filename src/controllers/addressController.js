@@ -8,7 +8,7 @@ export const createAddress = async (req, res, next) => {
     const {
         firstName,
         lastName,
-        deliveryAddress,
+        streetAddress,
         city,
         postCode,
         country,
@@ -34,11 +34,13 @@ export const createAddress = async (req, res, next) => {
             userId: req.user.id,
             firstName,
             lastName,
-            deliveryAddress,
+            streetAddress,
+            companyName: req.body.companyName || null,
             city,
             postCode,
             country,
             phone,
+            email: req.user.email,
             isDefault: isDefault || false
         }, { transaction: t });
 
@@ -73,7 +75,7 @@ export const updateAddress = async (req, res, next) => {
     const {
         firstName,
         lastName,
-        deliveryAddress,
+        streetAddress,
         city,
         postCode,
         country,
@@ -107,7 +109,7 @@ export const updateAddress = async (req, res, next) => {
         await address.update({
             firstName,
             lastName,
-            deliveryAddress,
+            streetAddress,
             city,
             postCode,
             country,

@@ -174,7 +174,8 @@ export const PAYMENT_METHODS = {
     BANK_TRANSFER: 'bank_transfer',
     CASH_ON_DELIVERY: 'cash_on_delivery',
     DIGITAL_WALLET: 'digital_wallet',
-    CRYPTO: 'cryptocurrency'
+    CRYPTO: 'cryptocurrency',
+    PAYPAL: 'paypal'
 }
 
 // Cart Status

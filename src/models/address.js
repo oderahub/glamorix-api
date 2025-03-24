@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
+import e from 'express';
 
 const Address = sequelize.define(
     'Address',
@@ -25,7 +26,11 @@ const Address = sequelize.define(
             type: DataTypes.STRING,
             allowNull: false
         },
-        deliveryAddress: {
+        companyName: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        streetAddress: {
             type: DataTypes.STRING,
             allowNull: false
         },
@@ -35,7 +40,7 @@ const Address = sequelize.define(
         },
         postCode: {
             type: DataTypes.STRING,
-            allowNull: false
+            allowNull: true
         },
         country: {
             type: DataTypes.STRING,
@@ -44,6 +49,10 @@ const Address = sequelize.define(
         phone: {
             type: DataTypes.STRING,
             allowNull: false
+        },
+        email: {
+            type: DataTypes.STRING,
+            allowNull: true
         },
         isDefault: { // Optional: Mark an address as default
             type: DataTypes.BOOLEAN,

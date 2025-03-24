@@ -138,11 +138,6 @@ export const updateProductSchema = Joi.object({
         .valid(...Object.values(PRODUCT_STATUS))
         .optional(),
     featuredImage: Joi.string().uri().optional(),
-
-    categoryIds: Joi.array()
-        .items(Joi.string().uuid().required())
-        .min(1)
-        .required(),
 });
 
 export const categorySchema = Joi.object({

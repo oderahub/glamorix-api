@@ -110,6 +110,33 @@ export const createSubSubCategory = async (req, res, next) => {
     }
 };
 
+// export const updateCategory = async (req, res, next) => {
+//     try {
+//         const category = await Category.findByPk(req.params.id);
+//         if (!category) {
+//             return ApiResponse.error(res, ERROR_MESSAGES.CATEGORY_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
+//         }
+
+//         const { name, description, image, isActive, displayOrder, parentId } = req.body;
+//         const slug = name ? slugify(name, { lower: true, strict: true }) : category.slug;
+//         const categoryImage = req.file ? req.file.buffer.toString('base64') : image || category.image;
+
+//         await category.update({
+//             name,
+//             slug,
+//             description,
+//             image: categoryImage,
+//             isActive: isActive !== undefined ? isActive : category.isActive,
+//             displayOrder: displayOrder || category.displayOrder,
+//             parentId
+//         });
+
+//         return ApiResponse.success(res, 'Category updated', category);
+//     } catch (error) {
+//         next(error);
+//     }
+// };
+
 export const updateCategory = async (req, res, next) => {
     try {
         const category = await Category.findByPk(req.params.id);
@@ -119,7 +146,14 @@ export const updateCategory = async (req, res, next) => {
 
         const { name, description, image, isActive, displayOrder, parentId } = req.body;
         const slug = name ? slugify(name, { lower: true, strict: true }) : category.slug;
-        const categoryImage = req.file ? req.file.buffer.toString('base64') : image || category.image;
+        let categoryImage;
+        if (req.file) {
+            categoryImage = req.file.buffer.toString('base64');
+        } else if (image === null) {
+            categoryImage = null;
+        } else {
+            categoryImage = image || category.image;
+        }
 
         await category.update({
             name,
