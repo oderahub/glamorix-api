@@ -10,6 +10,7 @@ dotenv.config();
 const PORT = process.env.PORT || 3000;
 
 async function startServer() {
+
     try {
         await sequelize.sync({ alter: true });
         app.listen(PORT, '0.0.0.0', () => {
@@ -22,19 +23,19 @@ async function startServer() {
 }
 
 function keepAlive(url) {
-    https
-        .get(url, (res) => {
-            logger.info(`Status: ${res.statusCode}`);
-        })
-        .on('error', (error) => {
-            console.error(`Error: ${error.message}`);
-        });
+  https
+    .get(url, (res) => {
+      logger.info(`Status: ${res.statusCode}`);
+    })
+    .on('error', (error) => {
+      console.error(`Error: ${error.message}`);
+    });
 }
 
 // Schedule a job to keep the server alive
 cron.schedule('*/5 * * * *', () => {
-    keepAlive('https://glamorix-api.onrender.com');
-    logger.info('Pinged the server every 5 minutes');
+  keepAlive('https://omorix-backend.onrender.com');
+  logger.info('Pinged the server every 5 minutes');
 });
 
 startServer();
