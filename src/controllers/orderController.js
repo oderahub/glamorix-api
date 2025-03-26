@@ -234,3 +234,39 @@ export const cancelOrder = async (req, res, next) => {
         next(error);
     }
 };
+
+
+
+export const getCustomerOrders = async (req, res, next) => {
+    try {
+        const { limit = 10, offset = 0, status, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
+
+        // Build the query conditions
+        const where = { userId: req.user.id };
+        if (status) {
+            where.status = status;
+        }
+
+        // Fetch orders with pagination, filtering, and sorting
+        const orders = await Order.findAndCountAll({
+            where,
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            order: [[sortBy, sortOrder]],
+            include: [{ model: OrderItem, as: 'items' }],
+        });
+
+        if (!orders.rows.length) {
+            return ApiResponse.error(res, ERROR_MESSAGES.NO_ORDERS_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
+        }
+
+        return ApiResponse.success(res, 'Orders retrieved successfully', {
+            total: orders.count,
+            orders: orders.rows,
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+        });
+    } catch (error) {
+        next(error);
+    }
+};
