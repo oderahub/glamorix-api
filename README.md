@@ -217,4 +217,4 @@ This project is licensed under the MIT License. See the LICENSE file for details
 ## Contact
 
 - Email: support@omorix.com
-- GitHub: your-username
+- GitHub:
