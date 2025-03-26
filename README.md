@@ -1,32 +1,24 @@
 # Omorix API
 
-Welcome to the Omorix API, a robust backend solution for the Omorix e-commerce platform. This API provides endpoints for user authentication, product management, order processing, category management, cart functionality, and customer administration, designed to support an online clothing store with admin and customer interfaces.
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [API Documentation](#api-documentation)
-- [Environment Variables](#environment-variables)
-- [Development](#development)
-- [Testing](#testing)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact](#contact)
-
 ## Overview
 
-The Omorix API is built using Node.js, Express, and Sequelize with a PostgreSQL database. It follows a RESTful architecture and includes JWT-based authentication for secure access. The API is designed to support both customer-facing features (e.g., shopping cart, order placement) and admin functionalities (e.g., product management, customer banning).
+Welcome to the Omorix API, a comprehensive backend solution for the Omorix e-commerce platform. This API provides endpoints for user authentication, product management, order processing, category management, cart functionality, customer administration, address management, and order history viewing. Designed to support an online clothing store, it offers both admin and customer interfaces.
+
+### Recent Updates:
+
+- Added `GET /orders` endpoint for customers to view their order history with pagination, filtering, and sorting.
+- Introduced address management endpoints for customers.
+- Enhanced category model and endpoints to support image uploads.
+- Refactored order-related endpoints for improved maintainability.
 
 ## Features
 
 - User authentication (register, login, OTP verification)
-- Category management (create, update, delete, hierarchical structure)
-- Product management (CRUD operations, stock updates, archiving)
-- Order management (place, view, cancel, admin status updates)
+- Category management (CRUD, hierarchical structure, image uploads)
+- Product management (CRUD, stock updates, archiving)
+- Order management (place, view, cancel, status updates, history viewing)
 - Shopping cart functionality (add, update, remove, checkout)
+- Address management (CRUD, set default address)
 - Customer management (view, ban, delete by admin)
 - API documentation via OpenAPI (Swagger)
 - Error handling and logging
@@ -37,195 +29,185 @@ The Omorix API is built using Node.js, Express, and Sequelize with a PostgreSQL 
 
 - Node.js (v16.x or later)
 - npm (v8.x or later)
-- PostgreSQL (v12.x or later)
+- PostgreSQL (for production) or MySQL (via MAMP for local development)
 - Git
 
-### Steps
+### Setup
 
-1. **Clone the repository**:
+1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/your-username/Omorix-api.git
+   git clone https://github.com/oderahub/Omorix-api.git
    cd Omorix-api
    ```
 
-2. **Install dependencies**:
+2. **Install dependencies:**
 
    ```bash
    npm install
    ```
 
-3. **Set up environment variables**:
-   Create a `.env` file in the root directory based on the provided `.env.example` (or see [Environment Variables](#environment-variables) below).
+3. **Set up environment variables:**
 
-   Example `.env`:
+   - Create a `.env` file based on `.env.example`.
+   - Example for MySQL (local development):
+     ```
+     PORT=3000
+     SWAGGER_PORT=3001
+     DATABASE_URL=mysql://root:root@localhost:8889/Omorix_db
+     JWT_SECRET=your-secure-jwt-secret
+     EMAIL_USER=your-email@gmail.com
+     EMAIL_PASS=your-email-password
+     ```
+   - Example for PostgreSQL (production):
+     ```
+     DATABASE_URL=postgres://user:password@localhost:5432/Omorix_db
+     ```
 
-   ```
-   PORT=3000
-   SWAGGER_PORT=3001
-   JWT_SECRET=your-secure-jwt-secret
-   EMAIL_USER=your-email@gmail.com
-   EMAIL_PASS=your-email-password
-
-   ```
-
-## Setting Up MySQL with MAMP
-
-Local Development
-Install MAMP:
-Download from mamp.info.
-
-Open MAMP and click “Start” (MySQL port: 8889).
-
-Create Database:
-Open phpMyAdmin (http://localhost:8888/phpmyadmin).
-
-Log in with root/root.
-
-Create Omorix_db.
-
-Set DATABASE_URL:
-
-DATABASE_URL=mysql://root:root@localhost:8889/Omorix_db
-
-## Troubleshooting Connection Issues
-
-Error: Can't connect to MySQL server on '127.0.0.1:8889' (61) or Can't connect... through socket '/tmp/mysql.sock' (2):
-Ensure MAMP MySQL is running.
-
-Check port in MAMP > Preferences > Ports (default: 8889).
-
-Use correct socket: mysql -u root -p -h localhost -P 8889 --socket=/Applications/MAMP/tmp/mysql/mysql.sock.
-
-Stop conflicting MySQL instances: brew services stop mysql.
-
-Use MAMP’s mysql client (if path exists): /Applications/MAMP/Library/bin/mysql -u root -p -h localhost -P 8889.
-
-Update config/database.js with dialectOptions.socketPath if socket issues persist.
-
-Check MAMP MySQL logs for errors.
-
-Reinstall MAMP if unresolved.
-
-4. **Initialize the database**:
-   Run the seed script to create tables and an admin user:
-
-   ```bash
-   node seed.js
-   ```
-
-   Alternatively, sync the database manually:
+4. **Set up the database:**
 
    ```bash
    npx sequelize db:migrate
    npx sequelize db:seed:all
    ```
 
-5. **Start the server**:
-
+5. **Start the server:**
    ```bash
    npm start
    ```
 
-6. **(Optional) Start the Swagger UI separately**:
-   ```bash
-   node swagger.js
-   ```
-
 ## Usage
 
-- Access the API at `http://localhost:3000/api`.
-- Use Postman or a similar tool to test endpoints with the provided parameters (see [Testing](#testing)).
-- View interactive API documentation at `http://localhost:3000/api-docs` or `http://localhost:3001/api-docs` (if using swagger.js).
+- API base URL: `http://localhost:3000/api`
+- Interactive API docs: `http://localhost:3000/api-docs`
+- Authenticate users to get a token and use protected endpoints.
 
 ### Example Workflow
 
-1. **Register an admin user**:
-   POST `/api/auth/register` with `{ "email": "admin@Omorix.com", "password": "admin123", "role": "admin" }`.
+**Register a user:**
 
-2. **Login to get a token**:
-   POST `/api/auth/login` with `{ "email": "admin@Omorix.com", "password": "admin123" }`.
-
-3. **Create a category**:
-   POST `/api/admin/categories` with `{ "name": "Tuxedos", "slug": "tuxedos" }` using the token.
-
-4. **Add a product**:
-   POST `/api/admin/products` with form-data including name, price, etc., and an image.
-
-## API Documentation
-
-The API is fully documented using OpenAPI (Swagger) specification, stored in a separate file at `docs/openapi.yaml`. To view the interactive documentation:
-
-- Start the server (`npm start`) and navigate to `http://localhost:3000/api-docs`.
-- (Optional) Run `node swagger.js` and visit `http://localhost:3001/api-docs` for a dedicated Swagger UI.
-
-The `openapi.yaml` file includes:
-
-- Endpoint definitions for authentication, admin, public, and order routes.
-- Request/response schemas.
-- Security definitions (JWT bearer token).
-
-To validate the specification:
-
-```bash
-swagger-cli validate docs/openapi.yaml
+```http
+POST /api/auth/register
 ```
 
-## Environment Variables
-
-Create a `.env` file with the following variables:
-
-- `PORT`: Server port (default: 3000)
-- `SWAGGER_PORT`: Swagger UI port (default: 3001)
-- `DATABASE_URL`: PostgreSQL connection string (e.g., `postgres://user:password@localhost:5432/Omorix_db`)
-- `JWT_SECRET`: Secret key for JWT signing
-- `EMAIL_USER`: Email account for OTP sending
-- `EMAIL_PASS`: Email password or app-specific password
-
-Example `.env.example`:
-
+```json
+{
+  "email": "customer@omorix.com",
+  "password": "customer123",
+  "firstName": "John",
+  "lastName": "Doe"
+}
 ```
-PORT=3000
-SWAGGER_PORT=3001
-DATABASE_URL=postgres://user:password@localhost:5432/Omorix_db
-JWT_SECRET=your-secure-secret-key
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=your-app-specific-password
+
+**Login:**
+
+```http
+POST /api/auth/login
+```
+
+```json
+{
+  "email": "customer@omorix.com",
+  "password": "customer123"
+}
+```
+
+**View order history:**
+
+```http
+GET /api/orders?limit=10&offset=0&status=pending
+```
+
+```json
+{
+  "success": true,
+  "message": "Orders retrieved successfully",
+  "data": {
+    "total": 1,
+    "orders": [
+      {
+        "id": "<order_id>",
+        "status": "pending",
+        "totalAmount": 50.0,
+        "createdAt": "2025-03-26T10:00:00Z"
+      }
+    ]
+  }
+}
 ```
 
 ## Development
 
-- **Code Style**: Follow JavaScript/ES6 standards with consistent indentation.
-- **Linting**: Install and configure ESLint (optional):
-  ```bash
-  npm install eslint --save-dev
-  npx eslint --init
-  ```
+### Model Updates
+
+- **Order Model:** Added fields like `trackingNumber`, `trackingUrl`, `shippedAt`, `deliveredAt`, `cancelledAt`, and `cancelReason`.
+- **Category Model:** Supports image uploads, refactored using a reusable `uploadImage` utility.
+- **Address Model:** Introduced for address management.
+
+### Utility for Image Uploads
+
+```javascript
+import multer from 'multer'
+import path from 'path'
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/')
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`)
+  }
+})
+
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png/
+    const isValid =
+      filetypes.test(path.extname(file.originalname).toLowerCase()) && filetypes.test(file.mimetype)
+    return isValid ? cb(null, true) : cb(new Error('Only JPEG/JPG/PNG images are allowed'))
+  }
+}).single('image')
+
+export default (req, res, next) => {
+  upload(req, res, (err) => {
+    if (err) return res.status(400).json({ message: err.message })
+    req.imageUrl = req.file ? `/uploads/${req.file.filename}` : null
+    next()
+  })
+}
+```
 
 ## Testing
 
-Test the API using Postman with the following endpoints:
+Test the API using Postman or a similar tool. Key endpoints:
 
-- **Authentication**:
-  - POST `/api/auth/register`: Register a user.
-  - POST `/api/auth/login`: Login to get a token.
-- **Admin**:
-  - POST `/api/admin/categories`: Create a category.
-  - GET `/api/admin/customers`: View all customers.
-- **Public**:
-  - GET `/api/products`: List products.
-- **Orders**:
-  - POST `/api/orders/cart`: Add to cart.
-  - POST `/api/orders/cart/checkout`: Checkout.
+### Authentication
 
-Refer to the [API Documentation](#api-documentation) for detailed parameters.
+- `POST /api/auth/register` – Register a user.
+- `POST /api/auth/login` – Login to get a token.
+
+### Addresses
+
+- `POST /api/addresses` – Create a new address.
+- `GET /api/addresses` – View all addresses.
+
+### Orders
+
+- `POST /api/orders` – Place an order.
+- `GET /api/orders` – View order history.
+
+### Admin
+
+- `POST /api/admin/categories` – Create a category with image upload.
+- `GET /api/admin/customers` – View all customers.
 
 ## Contributing
 
 1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature/your-feature`).
-3. Commit changes (`git commit -m "Add your feature"`).
-4. Push to the branch (`git push origin feature/your-feature`).
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit changes: `git commit -m "Add your feature"`
+4. Push to the branch: `git push origin feature/your-feature`
 5. Open a Pull Request.
 
 ## License
@@ -234,6 +216,5 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 ## Contact
 
-- Email: support@Omorix.com
-- GitHub:
-  update: refer to my note update models and refactore specific endpoints
+- Email: support@omorix.com
+- GitHub: your-username
