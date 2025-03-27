@@ -626,6 +626,85 @@ components:
         timestamp:
           type: string
           format: date-time
+    PayPalOrderCreateResponse:
+      type: object
+      properties:
+        paypalOrderId:
+          type: string
+          description: The PayPal order ID
+        approvalUrl:
+          type: string
+          format: uri
+          description: The URL to redirect the user to for PayPal payment approval
+    PayPalCaptureResponse:
+      type: object
+      properties:
+        orderId:
+          type: string
+          format: uuid
+          description: The store order ID
+        orderNumber:
+          type: string
+          description: The order number
+        status:
+          type: string
+          enum: [pending, processing, shipped, delivered, canceled]
+          description: The updated order status
+        paymentStatus:
+          type: string
+          enum: [pending, paid, failed, refunded]
+          description: The payment status
+        captureId:
+          type: string
+          description: The PayPal capture ID
+    PaymentStatusResponse:
+      type: object
+      properties:
+        orderId:
+          type: string
+          format: uuid
+          description: The store order ID
+        orderNumber:
+          type: string
+          description: The order number
+        status:
+          type: string
+          enum: [pending, processing, shipped, delivered, canceled]
+          description: The order status
+        paymentStatus:
+          type: string
+          enum: [pending, paid, failed, refunded]
+          description: The payment status
+        paypalDetails:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              description: The PayPal order ID
+            status:
+              type: string
+              description: The PayPal order status
+            payer:
+              type: object
+              properties:
+                email_address:
+                  type: string
+                  format: email
+                  description: The PayPal email address of the payer
+                payer_id:
+                  type: string
+                  description: The PayPal payer ID
+                name:
+                  type: object
+                  properties:
+                    given_name:
+                      type: string
+                    surname:
+                      type: string
+
+
+
 paths:
   /auth/register:
     post:
@@ -2448,6 +2527,142 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /payments/paypal/create/{orderId}:
+    post:
+      summary: Create a PayPal order for an existing order
+      description: Creates a PayPal order for payment processing and returns the approval URL to redirect the user to PayPal.
+      tags:
+        - Payments
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: PayPal order created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PayPalOrderCreateResponse'
+        '400':
+          description: Validation error or invalid order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /payments/paypal/capture/{paypalOrderId}:
+    post:
+      summary: Capture a PayPal payment
+      description: Captures a previously approved PayPal payment and updates the order status.
+      tags:
+        - Payments
+      parameters:
+        - name: paypalOrderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment captured successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PayPalCaptureResponse'
+        '400':
+          description: Invalid PayPal order ID or capture failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /payments/paypal/webhook:
+    post:
+      summary: Handle PayPal webhook events
+      description: Endpoint for PayPal to send webhook notifications about payment events.
+      tags:
+        - Payments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event_type:
+                  type: string
+                  description: The type of PayPal event
+                resource:
+                  type: object
+                  description: The PayPal resource data
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid webhook payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /payments/status/{orderId}:
+    get:
+    summary: Get payment status for an order
+    description: Retrieves the current payment status of an order.
+    tags:
+      - Payments
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Payment status retrieved successfully
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/PaymentStatusResponse'
+      '404':
+        description: Order not found
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Error'
 # openapi: 3.0.3
 # info:
 #   title: Omorix API
