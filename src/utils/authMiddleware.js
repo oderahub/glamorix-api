@@ -22,3 +22,22 @@ export const requireRole = (role) => (req, res, next) => {
   }
   next();
 };
+
+//optional authentication middleware for guest users 
+export const optionalAuthenticateToken = (req, res, next) => {
+  const token = req.headers['authorization']?.split(' ')[1];
+  if (!token) {
+    // No token provided, but that's okay - proceed as guest
+    return next();
+  }
+  
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      // Invalid token, but that's okay for optional auth - proceed as guest
+      return next();
+    }
+    
+    req.user = user;
+    next();
+  });
+};

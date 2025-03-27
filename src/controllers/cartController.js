@@ -342,7 +342,6 @@ export const removeFromCart = async (req, res, next) => {
 
 
 
-
 // Helper function to get cart items
 
 // export const checkout = async (req, res, next) => {
@@ -765,7 +764,6 @@ export const checkout = async (req, res, next) => {
         next(error);
     }
 };
-
 
 
 
