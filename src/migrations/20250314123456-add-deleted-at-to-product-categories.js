@@ -5,11 +5,11 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.addColumn('ProductCategories', 'deletedAt', {
       type: Sequelize.DATE,
-      allowNull: true
+      allowNull: true,
     });
   },
 
   async down(queryInterface, Sequelize) {
     await queryInterface.removeColumn('ProductCategories', 'deletedAt');
-  }
+  },
 };

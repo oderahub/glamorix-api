@@ -1,6 +1,11 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
-import { ORDER_STATUS, PAYMENT_STATUS, PAYMENT_METHODS, SHIPPING_METHODS } from '../constants/constant.js';
+import {
+  ORDER_STATUS,
+  PAYMENT_STATUS,
+  PAYMENT_METHODS,
+  SHIPPING_METHODS,
+} from '../constants/constant.js';
 
 const Order = sequelize.define(
   'Order',
@@ -8,186 +13,186 @@ const Order = sequelize.define(
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
+      primaryKey: true,
     },
     userId: {
       type: DataTypes.UUID,
       allowNull: true,
       references: {
         model: 'Users',
-        key: 'id'
-      }
+        key: 'id',
+      },
     },
     orderNumber: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true
+      unique: true,
     },
     status: {
       type: DataTypes.ENUM(...Object.values(ORDER_STATUS)),
-      defaultValue: ORDER_STATUS.PENDING
+      defaultValue: ORDER_STATUS.PENDING,
     },
     totalAmount: {
       type: DataTypes.DECIMAL(10, 2),
-      allowNull: false
+      allowNull: false,
     },
     subtotal: {
       type: DataTypes.DECIMAL(10, 2),
-      allowNull: false
+      allowNull: false,
     },
     tax: {
       type: DataTypes.DECIMAL(10, 2),
-      defaultValue: 0
+      defaultValue: 0,
     },
     deliveryFee: {
       type: DataTypes.DECIMAL(10, 2),
-      defaultValue: 0
+      defaultValue: 0,
     },
     shippingCost: {
       type: DataTypes.DECIMAL(10, 2),
-      defaultValue: 0
+      defaultValue: 0,
     },
     discount: {
       type: DataTypes.DECIMAL(10, 2),
-      defaultValue: 0
+      defaultValue: 0,
     },
     firstName: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     lastName: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     shippingFirstName: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     shippingLastName: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     deliveryAddress: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     shippingAddress: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     city: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     shippingCity: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     postCode: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     shippingZip: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     country: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     shippingCountry: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     phone: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     shippingPhone: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     email: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        isEmail: true
-      }
+        isEmail: true,
+      },
     },
     paymentMethod: {
       type: DataTypes.ENUM(...Object.values(PAYMENT_METHODS)),
-      allowNull: false
+      allowNull: false,
     },
     paymentStatus: {
       type: DataTypes.ENUM(...Object.values(PAYMENT_STATUS)),
-      defaultValue: PAYMENT_STATUS.PENDING
+      defaultValue: PAYMENT_STATUS.PENDING,
     },
     shippingMethod: {
       type: DataTypes.ENUM(...Object.values(SHIPPING_METHODS)),
-      defaultValue: SHIPPING_METHODS.STANDARD
+      defaultValue: SHIPPING_METHODS.STANDARD,
     },
     processedAt: {
       type: DataTypes.DATE,
-      allowNull: true
+      allowNull: true,
     },
     shippedAt: {
       type: DataTypes.DATE,
-      allowNull: true
+      allowNull: true,
     },
     deliveredAt: {
       type: DataTypes.DATE,
-      allowNull: true
+      allowNull: true,
     },
     cancelledAt: {
       type: DataTypes.DATE,
-      allowNull: true
+      allowNull: true,
     },
     refundedAt: {
       type: DataTypes.DATE,
-      allowNull: true
+      allowNull: true,
     },
     paidAt: {
       type: DataTypes.DATE,
-      allowNull: true
+      allowNull: true,
     },
     cancelReason: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     notes: {
       type: DataTypes.TEXT,
-      allowNull: true
+      allowNull: true,
     },
     trackingNumber: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     trackingUrl: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
-    
+
     // PayPal specific fields
     paypalOrderId: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     paypalCaptureId: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     paypalPayerId: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
     },
     paypalTransactionFee: {
       type: DataTypes.DECIMAL(10, 2),
-      allowNull: true
+      allowNull: true,
     },
     paypalPaymentStatus: {
       type: DataTypes.STRING,
-      allowNull: true
-    }
+      allowNull: true,
+    },
   },
   {
     timestamps: true,
@@ -198,9 +203,9 @@ const Order = sequelize.define(
       { name: 'order_payment_status_index', fields: ['paymentStatus'] },
       { name: 'order_created_at_index', fields: ['createdAt'] },
       { name: 'order_paypal_order_id_index', fields: ['paypalOrderId'] },
-      { name: 'order_paypal_capture_id_index', fields: ['paypalCaptureId'] }
-    ]
-  }
+      { name: 'order_paypal_capture_id_index', fields: ['paypalCaptureId'] },
+    ],
+  },
 );
 
 export default Order;
