@@ -125,6 +125,7 @@ export const updateAddress = async (req, res, next) => {
     }
 };
 
+
 // Delete an address
 export const deleteAddress = async (req, res, next) => {
     const { addressId } = req.params;

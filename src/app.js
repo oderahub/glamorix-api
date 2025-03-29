@@ -8,6 +8,7 @@ import adminRoute from './routes/adminRoutes.js'
 import categoryRoute from './routes/categoryRoutes.js'
 import productRoute from './routes/productRoutes.js'
 import addressRoutes from './routes/addressRoutes.js'
+import paymentRoutes from './routes/paymentRoutes.js'
 import { errorHandler } from './middlewares/error-handler.js'
 import swaggerUi from 'swagger-ui-express';
 import fs from 'fs';
@@ -23,7 +24,7 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.use(
   cors({
     origin: '*',
-    methods: 'GET,POST,PUT,DELETE',
+    methods: 'GET,POST,PUT,DELETE,PATCH,OPTIONS',
     allowedHeaders: 'Content-Type, Authorization'
   })
 )
@@ -38,6 +39,7 @@ app.use('/api', categoryRoute)
 app.use('/api/orders', orderRoute)
 app.use('/api', productRoute)
 app.use('/api/addresses', addressRoutes)
+app.use('/api/payments', paymentRoutes)
 
 
 const swaggerDocument = YAML.parse(fs.readFileSync('./docs/openapi.yaml', 'utf8'));

@@ -10,16 +10,15 @@ dotenv.config();
 const PORT = process.env.PORT || 3000;
 
 async function startServer() {
-
-    try {
-        await sequelize.sync();
-        app.listen(PORT, '0.0.0.0', () => {
-            logger.info(`Server is running on port ${PORT}`);
-        });
-    } catch (error) {
-        logger.error('Failed to start server due to database connection error:', error);
-        process.exit(1);
-    }
+  try {
+    await sequelize.sync({ alter: true });
+    app.listen(PORT, '0.0.0.0', () => {
+      logger.info(`Server is running on port ${PORT}`);
+    });
+  } catch (error) {
+    logger.error('Failed to start server due to database connection error:', error);
+    process.exit(1);
+  }
 }
 
 function keepAlive(url) {
@@ -34,7 +33,7 @@ function keepAlive(url) {
 
 // Schedule a job to keep the server alive
 cron.schedule('*/5 * * * *', () => {
-  keepAlive('https://omorix-backend.onrender.com');
+  keepAlive('https://omorix-backend-2.onrender.com');
   logger.info('Pinged the server every 5 minutes');
 });
 
