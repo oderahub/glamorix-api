@@ -704,7 +704,6 @@ components:
                       type: string
 
 
-
 paths:
   /auth/register:
     post:
