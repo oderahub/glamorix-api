@@ -4,8 +4,34 @@ import { HTTP_STATUS_CODES, ERROR_MESSAGES, PRODUCT_STATUS } from '../constants/
 import slugify from 'slugify';
 import sequelize from '../config/database.js';
 import { v4 as uuidv4 } from 'uuid';
+import { Op } from 'sequelize';
 
 
+// Helper function to transform product data for API responses
+const transformProductData = (product, baseUrl = '') => {
+    if (!product) return null;
+
+    const productJSON = product.toJSON ? product.toJSON() : { ...product };
+
+    // Transform images to include URLs
+    if (productJSON.images && productJSON.images.length > 0) {
+        productJSON.images = productJSON.images.map(image => ({
+            ...image,
+            imageUrl: `${baseUrl}/products/images/${image.id}`,
+            // Remove the large base64 string if it exists in the response
+            imageData: undefined
+        }));
+    }
+
+    // Remove the base64 featuredImage from response and use first image URL instead
+    if (productJSON.images && productJSON.images.length > 0) {
+        productJSON.featuredImageUrl = productJSON.images.find(img => img.isDefault)?.imageUrl ||
+            productJSON.images[0].imageUrl;
+    }
+    delete productJSON.featuredImage;
+
+    return productJSON;
+};
 
 export const addProductImages = async (req, res, next) => {
     const t = await sequelize.transaction();
@@ -44,12 +70,19 @@ export const addProductImages = async (req, res, next) => {
         });
         await t.commit();
 
-        const result = await ProductImage.findAll({
+        const images = await ProductImage.findAll({
             where: { productId: product.id },
             attributes: ['id', 'displayOrder', 'isDefault', 'createdAt', 'mimeType']
         });
 
-        return ApiResponse.success(res, 'Product images added successfully', result);
+        // Transform the response to include image URLs
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const transformedImages = images.map(image => ({
+            ...image.toJSON(),
+            imageUrl: `${baseUrl}/products/images/${image.id}`
+        }));
+
+        return ApiResponse.success(res, 'Product images added successfully', transformedImages);
     } catch (error) {
         await t.rollback();
         next(error);
@@ -151,7 +184,11 @@ export const createProduct = async (req, res, next) => {
             ]
         });
 
-        return ApiResponse.success(res, 'Product created successfully', result, 201);
+        // Transform result to include image URLs
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const transformedResult = transformProductData(result, baseUrl);
+
+        return ApiResponse.success(res, 'Product created successfully', transformedResult, 201);
     } catch (error) {
         await t.rollback();
         next(error);
@@ -207,10 +244,20 @@ export const updateProduct = async (req, res, next) => {
         const result = await Product.findByPk(product.id, {
             include: [
                 { model: Category, as: 'categories', through: { attributes: [] } },
-                { model: ProductVariant, as: 'variants' }
+                { model: ProductVariant, as: 'variants' },
+                {
+                    model: ProductImage,
+                    as: 'images',
+                    attributes: ['id', 'displayOrder', 'isDefault', 'mimeType']
+                }
             ]
         });
-        return ApiResponse.success(res, 'Product updated successfully', result);
+
+        // Transform result to include image URLs
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const transformedResult = transformProductData(result, baseUrl);
+
+        return ApiResponse.success(res, 'Product updated successfully', transformedResult);
     } catch (error) {
         await t.rollback();
         next(error);
@@ -223,7 +270,7 @@ export const deleteProduct = async (req, res, next) => {
         if (!product) {
             return ApiResponse.error(res, ERROR_MESSAGES.PRODUCT_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
         }
-        await product.destroy();
+        await product.destroy({ force: true });
         return ApiResponse.success(res, 'Product deleted', null, HTTP_STATUS_CODES.NO_CONTENT);
     } catch (error) {
         next(error);
@@ -281,8 +328,6 @@ export const restoreProduct = async (req, res, next) => {
     }
 };
 
-
-
 export const getProductImage = async (req, res, next) => {
     try {
         const { imageId } = req.params;
@@ -301,4 +346,149 @@ export const getProductImage = async (req, res, next) => {
     }
 };
 
+// New function to get all products with proper image URLs
+export const getAllProducts = async (req, res, next) => {
+    try {
+        const {
+            limit = 10,
+            offset = 0,
+            categoriesId,
+            isActive = PRODUCT_STATUS.ACTIVE,
+            minPrice,
+            maxPrice,
+            sort = 'createdAt_desc',
+        } = req.query;
+        const where = {};
 
+        // Add isActive filter
+        if (isActive) {
+            where.isActive = isActive;
+        }
+
+        if (minPrice || maxPrice) {
+            where.price = {};
+            if (minPrice) where.price[Op.gte] = parseFloat(minPrice);
+            if (maxPrice) where.price[Op.lte] = parseFloat(maxPrice);
+        }
+
+        let order = [['createdAt', 'DESC']];
+        if (sort === 'price_asc') order = [['price', 'ASC']];
+        if (sort === 'price_desc') order = [['price', 'DESC']];
+
+        const products = await Product.findAll({
+            where,
+            include: [
+                { model: Category, as: 'categories', through: { attributes: [] } },
+                { model: ProductVariant, as: 'variants' },
+                {
+                    model: ProductImage,
+                    as: 'images',
+                    attributes: ['id', 'displayOrder', 'isDefault', 'mimeType'], // Exclude imageData
+                    order: [['displayOrder', 'ASC']]
+                }
+            ],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            order,
+            paranoid: false,
+        });
+
+        const total = await Product.count({ where });
+
+        // Transform products to include image URLs
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const transformedProducts = products.map(product => transformProductData(product, baseUrl));
+
+        return ApiResponse.success(res, 'Products retrieved', {
+            products: transformedProducts,
+            pagination: { limit, offset, total },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Get product by ID with proper image URLs
+export const getProductById = async (req, res, next) => {
+    try {
+        const product = await Product.findByPk(req.params.id, {
+            include: [
+                { model: Category, as: 'categories', through: { attributes: [] } },
+                { model: ProductVariant, as: 'variants' },
+                {
+                    model: ProductImage,
+                    as: 'images',
+                    attributes: ['id', 'displayOrder', 'isDefault', 'mimeType'],
+                    order: [['displayOrder', 'ASC']]
+                }
+            ],
+            paranoid: false,
+        });
+
+        if (!product) {
+            return ApiResponse.error(res, ERROR_MESSAGES.PRODUCT_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
+        }
+
+        // Transform product to include image URLs
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const transformedProduct = transformProductData(product, baseUrl);
+
+        return ApiResponse.success(res, 'Product details', transformedProduct);
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Get products by category with proper image URLs
+export const getProductsByCategory = async (req, res, next) => {
+    try {
+        const { limit = 10, offset = 0, isActive = true, sort = 'createdAt_desc' } = req.query;
+        let order = [['createdAt', 'DESC']];
+        if (sort === 'price_asc') order = [['price', 'ASC']];
+        if (sort === 'price_desc') order = [['price', 'DESC']];
+
+        const products = await Product.findAll({
+            include: [
+                {
+                    model: Category,
+                    as: 'categories',
+                    where: { id: req.params.id, ...(isActive ? { isActive } : {}) },
+                    through: { attributes: [] },
+                    paranoid: false,
+                },
+                { model: ProductVariant, as: 'variants' },
+                {
+                    model: ProductImage,
+                    as: 'images',
+                    attributes: ['id', 'displayOrder', 'isDefault', 'mimeType'],
+                    order: [['displayOrder', 'ASC']]
+                }
+            ],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            order,
+        });
+
+        const total = await Product.count({
+            include: [
+                {
+                    model: Category,
+                    as: 'categories',
+                    where: { id: req.params.id, ...(isActive ? { isActive } : {}) },
+                    paranoid: false,
+                },
+            ],
+        });
+
+        // Transform products to include image URLs
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const transformedProducts = products.map(product => transformProductData(product, baseUrl));
+
+        return ApiResponse.success(res, 'Products by category', {
+            products: transformedProducts,
+            pagination: { limit, offset, total },
+        });
+    } catch (error) {
+        next(error);
+    }
+};

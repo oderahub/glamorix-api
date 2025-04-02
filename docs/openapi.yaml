@@ -2019,8 +2019,9 @@ paths:
         - name: isActive
           in: query
           schema:
-            type: boolean
-            default: true
+            type: string
+            enum: [active, inactive]
+            default: active
         - name: minPrice
           in: query
           schema:
