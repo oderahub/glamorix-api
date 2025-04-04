@@ -159,7 +159,7 @@ export async function createPayPalOrder(orderData) {
 //   }
 // }
 
-export const capturePaypalPayment = async (req, res, next) => {
+export const capturePayPalPayment = async (req, res, next) => {
   const { paypalOrderId } = req.params;
 
   let transaction;
