@@ -162,7 +162,7 @@ const generateOrderConfirmationEmailTemplate = (toEmail, order, orderItems) => {
                     <h2>Order Details</h2>
                     <p><strong>Order Number:</strong> ${order.orderNumber}</p>
                     <p><strong>Total Amount:</strong> £${parseFloat(order.totalAmount).toFixed(2)}</p>
-                    <p><strong>Subtotal:</strong> £${order.subtotal.toFixed(2)}</p>
+                    <p><strong>Subtotal:</strong> £${parseFloat(order.subtotal.parseFloat(toFixed(2)))}</p>
                     <p><strong>Delivery Fee:</strong> £${order.deliveryFee.toFixed(2)}</p>
                     <p><strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
                     <p><strong>Payment Method:</strong> ${paymentMethodDisplay}</p>
@@ -185,7 +185,7 @@ const generateOrderConfirmationEmailTemplate = (toEmail, order, orderItems) => {
                                 }</p>
                                 <p><strong>Quantity:</strong> ${item.quantity}</p>
                                 <p><strong>Unit Price:</strong> £${item.unitPrice.toFixed(2)}</p>
-                                <p><strong>Subtotal:</strong> £${item.subtotal.toFixed(2)}</p>
+                                <p><strong>Subtotal:</strong> £${item.parseFloat(subtotal.toFixed(2))}</p>
                             </li>
                         `,
                           )
