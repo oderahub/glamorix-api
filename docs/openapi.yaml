@@ -6,7 +6,7 @@ info:
   contact:
     email: support@omorix.com
 servers:
-  - url: https://omorix-backend-2.onrender.com/api
+  - url: https://omorix-backend.onrender.com/api
     description: Production Server
   - url: http://localhost:3000/api
     description: Development Server
@@ -1504,6 +1504,56 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /categories/images/{categoryId}:
+    get:
+      summary: Get image of a particular category
+      tags:
+        - Categories
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the category whose image is to be retrieved
+      responses:
+        '200':
+          description: Category image retrieved successfully
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+              headers:
+                Cache-Control:
+                  schema:
+                    type: string
+                  description: Cache control header set to public with 1 year max-age
+            image/png:
+              schema:
+                type: string
+                format: binary
+              headers:
+                Cache-Control:
+                  schema:
+                    type: string
+                  description: Cache control header set to public with 1 year max-age
+            image/gif:
+              schema:
+                type: string
+                format: binary
+              headers:
+                Cache-Control:
+                  schema:
+                    type: string
+                  description: Cache control header set to public with 1 year max-age
+        '404':
+          description: Category or image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /admin/categories/{id}:
     patch:
       summary: Update a category
@@ -2019,8 +2069,9 @@ paths:
         - name: isActive
           in: query
           schema:
-            type: boolean
-            default: true
+            type: string
+            enum: [active, inactive]
+            default: active
         - name: minPrice
           in: query
           schema:
