@@ -4,14 +4,19 @@ import { HTTP_STATUS_CODES, ERROR_MESSAGES } from '../constants/constant.js';
 import slugify from 'slugify';
 
 // Helper function to transform category data for API responses
-const transformCategoryData = (category, baseUrl = '') => {
+const transformCategoryData = (category, req) => {
     if (!category) return null;
 
     const categoryJSON = category.toJSON ? category.toJSON() : { ...category };
 
+    // Determine protocol: prefer X-Forwarded-Proto header, fall back to req.protocol
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}`;
+
     // Add image URL if image exists
     if (categoryJSON.image) {
-        categoryJSON.imageUrl = `${baseUrl}/categories/images/${categoryJSON.id}`;
+        categoryJSON.imageUrl = `${baseUrl}/api/categories/images/${categoryJSON.id}`;
         // Remove the large base64 string from response
         delete categoryJSON.image;
     }
@@ -19,7 +24,7 @@ const transformCategoryData = (category, baseUrl = '') => {
     // Transform subcategories recursively if they exist
     if (categoryJSON.subcategories && categoryJSON.subcategories.length > 0) {
         categoryJSON.subcategories = categoryJSON.subcategories.map(subcat =>
-            transformCategoryData(subcat, baseUrl)
+            transformCategoryData(subcat, req)
         );
     }
 
@@ -36,9 +41,9 @@ export const getAllCategories = async (req, res, next) => {
         });
 
         // Transform categories to include image URLs
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        // const baseUrl = `${req.protocol}://${req.get('host')}`;
         const transformedCategories = categories.map(category =>
-            transformCategoryData(category, baseUrl)
+            transformCategoryData(category, req)
         );
 
         return ApiResponse.success(res, 'Categories retrieved', transformedCategories);
@@ -62,8 +67,8 @@ export const getCategoryDetails = async (req, res, next) => {
         }
 
         // Transform category to include image URL
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
-        const transformedCategory = transformCategoryData(category, baseUrl);
+        // const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const transformedCategory = transformCategoryData(category, req);
 
         return ApiResponse.success(res, 'Category details', transformedCategory);
     } catch (error) {
@@ -105,8 +110,8 @@ export const createMainCategory = async (req, res, next) => {
         });
 
         // Transform response to include image URL
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
-        const transformedCategory = transformCategoryData(category, baseUrl);
+        //const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const transformedCategory = transformCategoryData(category, req);
 
         return ApiResponse.success(res, 'Main category created', transformedCategory, HTTP_STATUS_CODES.CREATED);
     } catch (error) {
@@ -136,8 +141,8 @@ export const createSubCategory = async (req, res, next) => {
         });
 
         // Transform response to include image URL
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
-        const transformedCategory = transformCategoryData(category, baseUrl);
+        // const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const transformedCategory = transformCategoryData(category, req);
 
         return ApiResponse.success(res, 'Sub-category created', transformedCategory, HTTP_STATUS_CODES.CREATED);
     } catch (error) {
@@ -167,8 +172,8 @@ export const createSubSubCategory = async (req, res, next) => {
         });
 
         // Transform response to include image URL
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
-        const transformedCategory = transformCategoryData(category, baseUrl);
+        // const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const transformedCategory = transformCategoryData(category, req);
 
         return ApiResponse.success(res, 'Sub-sub-category created', transformedCategory, HTTP_STATUS_CODES.CREATED);
     } catch (error) {
@@ -205,8 +210,8 @@ export const updateCategory = async (req, res, next) => {
         });
 
         // Transform response to include image URL
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
-        const transformedCategory = transformCategoryData(category, baseUrl);
+        //const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const transformedCategory = transformCategoryData(category, req);
 
         return ApiResponse.success(res, 'Category updated', transformedCategory);
     } catch (error) {
