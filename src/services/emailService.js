@@ -95,12 +95,140 @@ export const sendOrderConfirmationEmail = async (toEmail, order, orderItems) => 
   }
 };
 
+// const generateOrderConfirmationEmailTemplate = (toEmail, order, orderItems) => {
+//   // Format payment method for display
+//   const paymentMethodDisplay = order.paymentMethod
+//     .split('_')
+//     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+//     .join(' ');
+
+//   // Add payment instructions based on payment method
+//   let paymentInstructions = '';
+//   if (order.paymentMethod === 'paypal' && order.paypalOrderId) {
+//     paymentInstructions = `
+//       <div style="margin: 20px 0; padding: 15px; background-color: #fff7e6; border-left: 4px solid #f5a623; border-radius: 4px;">
+//         <p><strong>Payment Status:</strong> ${order.paymentStatus === 'paid' ? 'Paid' : 'Pending'}</p>
+//         <p>You've chosen to pay with PayPal. ${order.paymentStatus === 'paid' ? 'Your payment has been completed.' : 'Please complete your payment by clicking the PayPal checkout link in your browser.'}</p>
+//         <p>PayPal Reference: ${order.paypalOrderId}</p>
+//       </div>
+//     `;
+//   } else if (order.paymentMethod === 'cash_on_delivery') {
+//     paymentInstructions = `
+//       <div style="margin: 20px 0; padding: 15px; background-color: #e6f7ff; border-left: 4px solid #3498db; border-radius: 4px;">
+//         <p><strong>Payment Method:</strong> Cash On Delivery</p>
+//         <p>Please have the exact amount ready when your order is delivered.</p>
+//         <p>Total amount to be paid: £${parseFloat(order.totalAmount).toFixed(2)}</p>
+//       </div>
+//     `;
+//   }
+
+//   return `
+//         <!DOCTYPE html>
+//         <html>
+//         <head>
+//             <meta charset="utf-8">
+//             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+//             <title>Order Confirmation</title>
+//             <style>
+//                 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+//                 .container { background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); padding: 30px; }
+//                 .header { text-align: center; margin-bottom: 30px; }
+//                 .header img { max-width: 150px; height: auto; }
+//                 h1 { color: #2c3e50; font-size: 24px; font-weight: 600; margin-bottom: 20px; text-align: center; }
+//                 h2 { color: #2c3e50; font-size: 20px; font-weight: 600; margin-top: 20px; }
+//                 .order-details { background-color: #f8f9fa; border-radius: 6px; padding: 20px; margin: 25px 0; border-left: 4px solid #3498db; }
+//                 .order-details p { margin: 5px 0; }
+//                 .order-items { margin: 25px 0; }
+//                 .order-items ul { list-style-type: none; padding: 0; }
+//                 .order-items li { background-color: #f8f9fa; border-radius: 6px; padding: 15px; margin-bottom: 10px; }
+//                 .shipping-details { background-color: #f8f9fa; border-radius: 6px; padding: 20px; margin: 25px 0; border-left: 4px solid #3498db; }
+//                 .support { background-color: #f8f9fa; border-radius: 6px; padding: 15px; margin-top: 30px; }
+//                 .support h2 { font-size: 18px; margin-top: 0; }
+//                 .footer { margin-top: 30px; font-size: 12px; color: #7f8c8d; text-align: center; border-top: 1px solid #ecf0f1; padding-top: 20px; }
+//                 .payment-info { background-color: #f0f8ff; border-radius: 6px; padding: 20px; margin: 25px 0; border-left: 4px solid #3498db; }
+//                 .button { display: inline-block; background-color: #3498db; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; margin-top: 15px; }
+//             </style>
+//         </head>
+//         <body>
+//             <div class="container">
+//                 <div class="header">
+//                     <img src="${EMAIL_CONFIG.LOGO_URL}" alt="Omorix Logo">
+//                 </div>
+//                 <h1>Order Confirmation</h1>
+//                 <p>Dear ${order.firstName || 'Valued Customer'},</p>
+//                 <p>Thank you for your order! We're excited to let you know that your order has been successfully placed. Below are the details of your purchase:</p>
+
+//                 <div class="order-details">
+//                     <h2>Order Details</h2>
+//                     <p><strong>Order Number:</strong> ${order.orderNumber}</p>
+//                     <p><strong>Total Amount:</strong> £${parseFloat(order.totalAmount).toFixed(2)}</p>
+//                     <p><strong>Subtotal:</strong> £${order.subtotal.toFixed(2)}</p>
+//                     <p><strong>Delivery Fee:</strong> £${order.deliveryFee.toFixed(2)}</p>
+//                     <p><strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
+//                     <p><strong>Payment Method:</strong> ${paymentMethodDisplay}</p>
+//                 </div>
+
+//                 ${paymentInstructions}
+
+//                 <div class="order-items">
+//                     <h2>Order Items</h2>
+//                     <ul>
+//                         ${orderItems
+//                           .map(
+//                             (item) => `
+//                             <li>
+//                                 <p><strong>Product:</strong> ${item.productSnapshot?.name || `Product ID: ${item.productId}`}</p>
+//                                 <p><strong>Variant:</strong> ${
+//                                   item.productSnapshot?.variant
+//                                     ? `${item.productSnapshot.variant.size || ''} ${item.productSnapshot.variant.color || ''}`.trim()
+//                                     : 'Standard'
+//                                 }</p>
+//                                 <p><strong>Quantity:</strong> ${item.quantity}</p>
+//                                 <p><strong>Unit Price:</strong> £${item.unitPrice.toFixed(2)}</p>
+//                                 <p><strong>Subtotal:</strong> £${item.subtotal.toFixed(2)}</p>
+//                             </li>
+//                         `,
+//                           )
+//                           .join('')}
+//                     </ul>
+//                 </div>
+
+//                 <div class="shipping-details">
+//                     <h2>Shipping Details</h2>
+//                     <p><strong>Name:</strong> ${order.firstName} ${order.lastName}</p>
+//                     <p><strong>Address:</strong> ${order.deliveryAddress}, ${order.city}, ${order.postCode}, ${order.country}</p>
+//                     <p><strong>Phone:</strong> ${order.phone}</p>
+//                     <p><strong>Email:</strong> ${order.email}</p>
+//                 </div>
+
+//                 <p>We will notify you once your order is shipped. If you have any questions, feel free to reach out to us.</p>
+
+//                 <div class="support">
+//                     <h2>Need Help?</h2>
+//                     <p>Contact us at <a href="mailto:${EMAIL_CONFIG.SUPPORT_EMAIL}">${EMAIL_CONFIG.SUPPORT_EMAIL}</a>.</p>
+//                 </div>
+
+//                 <div class="footer">
+//                     <p>© ${new Date().getFullYear()} ${EMAIL_CONFIG.COMPANY_NAME}. All rights reserved.</p>
+//                 </div>
+//             </div>
+//         </body>
+//         </html>
+//     `;
+// };
+
 const generateOrderConfirmationEmailTemplate = (toEmail, order, orderItems) => {
   // Format payment method for display
   const paymentMethodDisplay = order.paymentMethod
     .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+
+  // Helper function to safely format currency values
+  const formatCurrency = (value) => {
+    if (value === null || value === undefined) return '0.00';
+    return parseFloat(value).toFixed(2);
+  };
 
   // Add payment instructions based on payment method
   let paymentInstructions = '';
@@ -117,7 +245,7 @@ const generateOrderConfirmationEmailTemplate = (toEmail, order, orderItems) => {
       <div style="margin: 20px 0; padding: 15px; background-color: #e6f7ff; border-left: 4px solid #3498db; border-radius: 4px;">
         <p><strong>Payment Method:</strong> Cash On Delivery</p>
         <p>Please have the exact amount ready when your order is delivered.</p>
-        <p>Total amount to be paid: £${parseFloat(order.totalAmount).toFixed(2)}</p>
+        <p>Total amount to be paid: £${formatCurrency(order.totalAmount)}</p>
       </div>
     `;
   }
@@ -161,9 +289,9 @@ const generateOrderConfirmationEmailTemplate = (toEmail, order, orderItems) => {
                 <div class="order-details">
                     <h2>Order Details</h2>
                     <p><strong>Order Number:</strong> ${order.orderNumber}</p>
-                    <p><strong>Total Amount:</strong> £${parseFloat(order.totalAmount).toFixed(2)}</p>
-                    <p><strong>Subtotal:</strong> £${parseFloat(order.subtotal.parseFloat(toFixed(2)))}</p>
-                    <p><strong>Delivery Fee:</strong> £${order.deliveryFee.toFixed(2)}</p>
+                    <p><strong>Total Amount:</strong> £${formatCurrency(order.totalAmount)}</p>
+                    <p><strong>Subtotal:</strong> £${formatCurrency(order.subtotal)}</p>
+                    <p><strong>Delivery Fee:</strong> £${formatCurrency(order.deliveryFee)}</p>
                     <p><strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
                     <p><strong>Payment Method:</strong> ${paymentMethodDisplay}</p>
                 </div>
@@ -184,8 +312,8 @@ const generateOrderConfirmationEmailTemplate = (toEmail, order, orderItems) => {
                                     : 'Standard'
                                 }</p>
                                 <p><strong>Quantity:</strong> ${item.quantity}</p>
-                                <p><strong>Unit Price:</strong> £${item.unitPrice.toFixed(2)}</p>
-                                <p><strong>Subtotal:</strong> £${item.parseFloat(subtotal.toFixed(2))}</p>
+                                <p><strong>Unit Price:</strong> £${formatCurrency(item.unitPrice)}</p>
+                                <p><strong>Subtotal:</strong> £${formatCurrency(item.subtotal)}</p>
                             </li>
                         `,
                           )
