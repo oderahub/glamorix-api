@@ -7,8 +7,8 @@ const transporter = nodemailer.createTransport({
   secure: EMAIL_CONFIG.SMTP_SECURE,
   auth: {
     user: EMAIL_CONFIG.SMTP_USER,
-    pass: EMAIL_CONFIG.SMTP_PASSWORD
-  }
+    pass: EMAIL_CONFIG.SMTP_PASSWORD,
+  },
 });
 
 export const sendOtpEmail = async (email, otp, firstName) => {
@@ -16,7 +16,7 @@ export const sendOtpEmail = async (email, otp, firstName) => {
     from: `"${EMAIL_CONFIG.SENDER_NAME}" <${EMAIL_CONFIG.SENDER_EMAIL}>`,
     to: email,
     subject: 'Your Verification Code',
-    html: generateOtpEmailTemplate(firstName, otp)
+    html: generateOtpEmailTemplate(firstName, otp),
   };
 
   try {
@@ -82,7 +82,7 @@ export const sendOrderConfirmationEmail = async (toEmail, order, orderItems) => 
     from: `"${EMAIL_CONFIG.SENDER_NAME}" <${EMAIL_CONFIG.SENDER_EMAIL}>`,
     to: toEmail,
     subject: `Order Confirmation - ${order.orderNumber}`,
-    html: generateOrderConfirmationEmailTemplate(toEmail, order, orderItems)
+    html: generateOrderConfirmationEmailTemplate(toEmail, order, orderItems),
   };
 
   try {
@@ -99,7 +99,7 @@ const generateOrderConfirmationEmailTemplate = (toEmail, order, orderItems) => {
   // Format payment method for display
   const paymentMethodDisplay = order.paymentMethod
     .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
   // Add payment instructions based on payment method
@@ -117,7 +117,7 @@ const generateOrderConfirmationEmailTemplate = (toEmail, order, orderItems) => {
       <div style="margin: 20px 0; padding: 15px; background-color: #e6f7ff; border-left: 4px solid #3498db; border-radius: 4px;">
         <p><strong>Payment Method:</strong> Cash On Delivery</p>
         <p>Please have the exact amount ready when your order is delivered.</p>
-        <p>Total amount to be paid: £${order.totalAmount.toFixed(2)}</p>
+        <p>Total amount to be paid: £${parseFloat(order.totalAmount).toFixed(2)}</p>
       </div>
     `;
   }
@@ -161,7 +161,7 @@ const generateOrderConfirmationEmailTemplate = (toEmail, order, orderItems) => {
                 <div class="order-details">
                     <h2>Order Details</h2>
                     <p><strong>Order Number:</strong> ${order.orderNumber}</p>
-                    <p><strong>Total Amount:</strong> £${order.totalAmount.toFixed(2)}</p>
+                    <p><strong>Total Amount:</strong> £${parseFloat(order.totalAmount).toFixed(2)}</p>
                     <p><strong>Subtotal:</strong> £${order.subtotal.toFixed(2)}</p>
                     <p><strong>Delivery Fee:</strong> £${order.deliveryFee.toFixed(2)}</p>
                     <p><strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
@@ -173,17 +173,23 @@ const generateOrderConfirmationEmailTemplate = (toEmail, order, orderItems) => {
                 <div class="order-items">
                     <h2>Order Items</h2>
                     <ul>
-                        ${orderItems.map(item => `
+                        ${orderItems
+                          .map(
+                            (item) => `
                             <li>
                                 <p><strong>Product:</strong> ${item.productSnapshot?.name || `Product ID: ${item.productId}`}</p>
-                                <p><strong>Variant:</strong> ${item.productSnapshot?.variant ? 
-                                    `${item.productSnapshot.variant.size || ''} ${item.productSnapshot.variant.color || ''}`.trim() : 
-                                    'Standard'}</p>
+                                <p><strong>Variant:</strong> ${
+                                  item.productSnapshot?.variant
+                                    ? `${item.productSnapshot.variant.size || ''} ${item.productSnapshot.variant.color || ''}`.trim()
+                                    : 'Standard'
+                                }</p>
                                 <p><strong>Quantity:</strong> ${item.quantity}</p>
                                 <p><strong>Unit Price:</strong> £${item.unitPrice.toFixed(2)}</p>
                                 <p><strong>Subtotal:</strong> £${item.subtotal.toFixed(2)}</p>
                             </li>
-                        `).join('')}
+                        `,
+                          )
+                          .join('')}
                     </ul>
                 </div>
 
@@ -217,7 +223,7 @@ export const sendPaymentConfirmationEmail = async (toEmail, order) => {
     from: `"${EMAIL_CONFIG.SENDER_NAME}" <${EMAIL_CONFIG.SENDER_EMAIL}>`,
     to: toEmail,
     subject: `Payment Confirmation - Order #${order.orderNumber}`,
-    html: generatePaymentConfirmationEmailTemplate(order)
+    html: generatePaymentConfirmationEmailTemplate(order),
   };
 
   try {
@@ -270,8 +276,11 @@ const generatePaymentConfirmationEmailTemplate = (order) => {
                 <div class="payment-details">
                     <h2>Payment Details</h2>
                     <p><strong>Order Number:</strong> ${order.orderNumber}</p>
-                    <p><strong>Amount Paid:</strong> £${order.totalAmount.toFixed(2)}</p>
-                    <p><strong>Payment Method:</strong> ${order.paymentMethod.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</p>
+                    <p><strong>Amount Paid:</strong> £${parseFloat(order.totalAmount).toFixed(2)}</p>
+                    <p><strong>Payment Method:</strong> ${order.paymentMethod
+                      .split('_')
+                      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                      .join(' ')}</p>
                     <p><strong>Payment Date:</strong> ${new Date(order.paidAt || order.updatedAt).toLocaleString()}</p>
                     ${order.paypalOrderId ? `<p><strong>PayPal Transaction ID:</strong> ${order.paypalOrderId}</p>` : ''}
                 </div>
@@ -280,7 +289,10 @@ const generatePaymentConfirmationEmailTemplate = (order) => {
                     <h2>Order Summary</h2>
                     <p><strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
                     <p><strong>Shipping Address:</strong> ${order.deliveryAddress}, ${order.city}, ${order.postCode}, ${order.country}</p>
-                    <p><strong>Shipping Method:</strong> ${order.shippingMethod.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</p>
+                    <p><strong>Shipping Method:</strong> ${order.shippingMethod
+                      .split('_')
+                      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                      .join(' ')}</p>
                 </div>
                 
                 <p>We'll notify you when your order has been shipped. You can track your order status by visiting our website.</p>
@@ -310,7 +322,7 @@ export const sendOrderShippedEmail = async (toEmail, order) => {
     from: `"${EMAIL_CONFIG.SENDER_NAME}" <${EMAIL_CONFIG.SENDER_EMAIL}>`,
     to: toEmail,
     subject: `Your Order #${order.orderNumber} Has Been Shipped`,
-    html: generateOrderShippedEmailTemplate(order)
+    html: generateOrderShippedEmailTemplate(order),
   };
 
   try {
@@ -360,22 +372,33 @@ const generateOrderShippedEmailTemplate = (order) => {
                 <p>Dear ${order.firstName || 'Valued Customer'},</p>
                 <p>Great news! Your order #${order.orderNumber} has been shipped and is on its way to you.</p>
                 
-                ${order.trackingNumber ? `
+                ${
+                  order.trackingNumber
+                    ? `
                 <div class="tracking-info">
                     <h2>Tracking Information</h2>
                     <p><strong>Tracking Number:</strong> ${order.trackingNumber}</p>
-                    ${order.trackingUrl ? `
+                    ${
+                      order.trackingUrl
+                        ? `
                     <p style="text-align: center; margin-top: 15px;">
                         <a href="${order.trackingUrl}" class="button" target="_blank">Track Your Package</a>
                     </p>
-                    ` : ''}
+                    `
+                        : ''
+                    }
                 </div>
-                ` : ''}
+                `
+                    : ''
+                }
                 
                 <div class="shipping-details">
                     <h2>Shipping Details</h2>
                     <p><strong>Shipping Address:</strong> ${order.deliveryAddress}, ${order.city}, ${order.postCode}, ${order.country}</p>
-                    <p><strong>Shipping Method:</strong> ${order.shippingMethod.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</p>
+                    <p><strong>Shipping Method:</strong> ${order.shippingMethod
+                      .split('_')
+                      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                      .join(' ')}</p>
                     <p><strong>Estimated Delivery:</strong> ${new Date(new Date(order.shippedAt || new Date()).getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString()} - ${new Date(new Date(order.shippedAt || new Date()).getTime() + 10 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
                 </div>
                 
