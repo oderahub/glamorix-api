@@ -135,6 +135,30 @@ export async function createPayPalOrder(orderData) {
  * @param {string} orderId The PayPal order ID
  * @returns {Promise<Object>} The captured payment details
  */
+// export async function capturePayPalPayment(orderId) {
+//   try {
+//     const accessToken = await generateAccessToken();
+
+//     const response = await axios({
+//       method: 'post',
+//       url: `${PAYPAL_API_BASE}/v2/checkout/orders/${orderId}/capture`,
+//       headers: {
+//         'Content-Type': 'application/json',
+//         Authorization: `Bearer ${accessToken}`,
+//       },
+//     });
+
+//     return response.data;
+//   } catch (error) {
+//     console.error('Failed to capture PayPal payment:', error.message);
+//     if (error.response) {
+//       console.error('Response data:', error.response.data);
+//       console.error('Response status:', error.response.status);
+//     }
+//     throw new Error('Failed to capture PayPal payment');
+//   }
+// }
+
 export async function capturePayPalPayment(orderId) {
   try {
     const accessToken = await generateAccessToken();
@@ -152,10 +176,21 @@ export async function capturePayPalPayment(orderId) {
   } catch (error) {
     console.error('Failed to capture PayPal payment:', error.message);
     if (error.response) {
-      console.error('Response data:', error.response.data);
+      console.error('Response data:', JSON.stringify(error.response.data));
       console.error('Response status:', error.response.status);
+      // Throw a more specific error with the PayPal error details
+      throw new Error(
+        `Failed to capture PayPal payment: ${error.response.status} - ${JSON.stringify(error.response.data)}`,
+      );
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('No response received:', error.request);
+      throw new Error(`Failed to capture PayPal payment: No response received from PayPal API`);
+    } else {
+      // Something happened in setting up the request
+      console.error('Error setting up request:', error.message);
+      throw new Error(`Failed to capture PayPal payment: ${error.message}`);
     }
-    throw new Error('Failed to capture PayPal payment');
   }
 }
 
