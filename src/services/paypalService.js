@@ -159,40 +159,81 @@ export async function createPayPalOrder(orderData) {
 //   }
 // }
 
-export async function capturePayPalPayment(orderId) {
-  try {
-    const accessToken = await generateAccessToken();
+export const capturePayment = async (req, res, next) => {
+  const { paypalOrderId } = req.params;
 
-    const response = await axios({
-      method: 'post',
-      url: `${PAYPAL_API_BASE}/v2/checkout/orders/${orderId}/capture`,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
+  let transaction;
+  try {
+    transaction = await sequelize.transaction();
+
+    // Find the order by PayPal order ID
+    const order = await Order.findOne({
+      where: { paypalOrderId },
+      include: [{ model: OrderItem, as: 'items' }],
+      transaction,
     });
 
-    return response.data;
-  } catch (error) {
-    console.error('Failed to capture PayPal payment:', error.message);
-    if (error.response) {
-      console.error('Response data:', JSON.stringify(error.response.data));
-      console.error('Response status:', error.response.status);
-      // Throw a more specific error with the PayPal error details
-      throw new Error(
-        `Failed to capture PayPal payment: ${error.response.status} - ${JSON.stringify(error.response.data)}`,
-      );
-    } else if (error.request) {
-      // The request was made but no response was received
-      console.error('No response received:', error.request);
-      throw new Error(`Failed to capture PayPal payment: No response received from PayPal API`);
-    } else {
-      // Something happened in setting up the request
-      console.error('Error setting up request:', error.message);
-      throw new Error(`Failed to capture PayPal payment: ${error.message}`);
+    if (!order) {
+      if (transaction) await transaction.rollback();
+      return ApiResponse.error(res, ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
     }
+
+    // Check if the order has already been paid
+    if (order.paymentStatus === PAYMENT_STATUS.PAID) {
+      if (transaction) await transaction.rollback();
+      return ApiResponse.success(res, 'Payment already processed', {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        captureId: order.paypalCaptureId,
+      });
+    }
+
+    // Capture the payment
+    const captureData = await capturePayPalPayment(paypalOrderId);
+
+    // Update the order with payment details
+    const captureId = captureData.purchase_units[0].payments.captures[0].id;
+    const paymentStatus =
+      captureData.status === 'COMPLETED' ? PAYMENT_STATUS.PAID : PAYMENT_STATUS.PENDING;
+
+    await order.update(
+      {
+        status: ORDER_STATUS.PROCESSING,
+        paymentStatus,
+        paypalCaptureId: captureId,
+        paidAt: new Date(),
+      },
+      { transaction },
+    );
+
+    // If payment is successful, send confirmation email
+    if (paymentStatus === PAYMENT_STATUS.PAID) {
+      await sendOrderConfirmationEmail(order.email, order, order.items);
+    }
+
+    await transaction.commit();
+
+    return ApiResponse.success(res, 'Payment captured successfully', {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      paymentStatus,
+      captureId,
+    });
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    console.error('Error capturing PayPal payment:', error);
+
+    // Check if this is a known PayPal error about multiple capture attempts
+    if (error.message && error.message.includes('already been processed')) {
+      return ApiResponse.error(res, error.message, HTTP_STATUS_CODES.BAD_REQUEST);
+    }
+
+    next(error);
   }
-}
+};
 
 /**
  * Get PayPal order details
