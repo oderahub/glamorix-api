@@ -41,13 +41,24 @@ app.use(
   }),
 );
 
-app.use('/api/products/images', (req, res, next) => {
+// app.use('/api/products/images', (req, res, next) => {
+//   res.header('Access-Control-Allow-Origin', '*'); // Allow all origins for product images
+//   next();
+// });
+
+// app.use('/api/category/images', (req, res, next) => {
+//   res.header('Access-Control-Allow-Origin', '*'); // Allow all origins for caetgory images
+//   next();
+// });
+
+app.use('/api/products/images/:imageId', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*'); // Allow all origins for product images
   next();
 });
 
-app.use('/api/category/images', (req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*'); // Allow all origins for caetgory images
+//categories
+app.use('/products/category/:id', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*'); // Allow all origins for product images
   next();
 });
 
