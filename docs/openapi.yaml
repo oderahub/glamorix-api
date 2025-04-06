@@ -1760,67 +1760,72 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /admin/products/{id}/stock:
-    patch:
-      summary: Update product variant stock
-      tags:
-        - Admin
-        - Products
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
+  /admin/products/{productId}/stock:
+  patch:
+    summary: Update product variant stock
+    tags:
+      - Admin
+      - Products
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: productId
+        in: path
         required: true
+        description: ID of the product to update
+        schema:
+          type: string
+          format: uuid
+      - name: variantId
+        in: query
+        required: true
+        description: ID of the specific product variant to update
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              stockQuantity:
+                type: integer
+                minimum: 0
+                description: The new stock quantity for the specified variant
+            required:
+              - stockQuantity
+    responses:
+      '200':
+        description: Stock updated successfully
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                stockQuantity:
-                  type: integer
-                  minimum: 0
-                variantId:
-                  type: string
-                  format: uuid
-                  description: The ID of the variant to update (optional if updating the product's base stock)
-              required:
-                - stockQuantity
-      responses:
-        '200':
-          description: Stock updated
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/Product'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden - Admin access required
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Product or variant not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+              allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ProductVariant'
+      '400':
+        description: Bad request - Missing or invalid variantId parameter
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Error'
+      '403':
+        description: Forbidden - Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Error'
+      '404':
+        description: Product or variant not found
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Error'
   /admin/products/{id}/archive:
     patch:
       summary: Archive a product
