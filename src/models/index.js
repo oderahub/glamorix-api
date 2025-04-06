@@ -11,8 +11,9 @@ import {
   OrderItem,
   Cart,
   CartItem,
-  Address
-} from './relationships.js'
+  Address,
+  Wishlist,
+} from './relationships.js';
 
 export {
   User,
@@ -27,5 +28,6 @@ export {
   OrderItem,
   Cart,
   CartItem,
-  Address
-}
+  Address,
+  Wishlist,
+};

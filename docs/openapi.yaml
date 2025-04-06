@@ -163,6 +163,35 @@ components:
         - city
         - country
         - phone
+    Wishlist:
+      type: object
+      properties:
+      id:
+        type: string
+        format: uuid
+      userId:
+        type: string
+        format: uuid
+      productId:
+        type: string
+        format: uuid
+      product:
+        $ref: '#/components/schemas/Product'
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
+    WishlistAddSchema:
+      type: object
+      properties:
+      productId:
+        type: string
+        format: uuid
+        description: The ID of the product to add to the wishlist
+      required:
+        - productId
     Category:
       type: object
       properties:
@@ -1556,7 +1585,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
   /categories/subcategory/{subcategoryId}:
     get:
       summary: Get subcategory details
@@ -1588,7 +1616,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
   /categories/subcategory/{subcategoryId}/subsubcategories:
     get:
       summary: Get all subsubcategories under a subcategory
@@ -3347,6 +3374,193 @@ paths:
                         $ref: '#/components/schemas/PaymentStatusResponse'
         '404':
           description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /wishlist:
+    post:
+      summary: Add product to wishlist
+      description: Adds a product to the authenticated user's wishlist.
+      tags:
+        - Wishlist
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WishlistAddSchema'
+      responses:
+        '201':
+          description: Product added to wishlist successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Wishlist'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      summary: Get user's wishlist
+      description: Retrieves all products in the authenticated user's wishlist.
+      tags:
+        - Wishlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Wishlist retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          wishlist:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Wishlist'
+                          pagination:
+                            type: object
+                            properties:
+                              limit:
+                                type: integer
+                              offset:
+                                type: integer
+                              total:
+                                type: integer
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Clear wishlist
+      description: Removes all products from the authenticated user's wishlist.
+      tags:
+        - Wishlist
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Wishlist cleared successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /wishlist/{productId}:
+    delete:
+      summary: Remove product from wishlist
+      description: Removes a specific product from the authenticated user's wishlist.
+      tags:
+        - Wishlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the product to remove from wishlist
+      responses:
+        '204':
+          description: Product removed from wishlist successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Product not found in wishlist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /wishlist/check/{productId}:
+    get:
+      summary: Check wishlist status
+      description: Checks if a product is in the authenticated user's wishlist.
+      tags:
+        - Wishlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the product to check
+      responses:
+        '200':
+          description: Wishlist status retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          inWishlist:
+                            type: boolean
+                            description: Whether the product is in the user's wishlist
+        '401':
+          description: Unauthorized - User must be authenticated
           content:
             application/json:
               schema:
