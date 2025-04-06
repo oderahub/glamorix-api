@@ -1484,6 +1484,55 @@ paths:
                 $ref: '#/components/schemas/Error'     
   /admin/categories/{subCategoryId}/subsub:
     post:
+      summary: Create a sub-subcategory
+      tags:
+        - Admin
+        - Categories
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: subCategoryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CategoryCreateSchema'
+      responses:
+        '201':
+          description: Sub-subcategory created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Category'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Parent subcategory not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /categories:
     get:
       summary: Get all categories
