@@ -142,7 +142,10 @@ export const login = async (req, res, next) => {
       expiresIn: '1h',
     });
     await User.update({ lastLogin: new Date() }, { where: { id: user.id } });
-    return ApiResponse.success(res, 'Login successful', { token });
+    return ApiResponse.success(res, 'Login successful', {
+      token,
+      role: user.role,
+    });
   } catch (error) {
     next(error);
   }

@@ -28,6 +28,7 @@ app.use(
     origin: '*',
     methods: 'GET,POST,PUT,DELETE,PATCH,OPTIONS',
     allowedHeaders: 'Content-Type, Authorization',
+    credentials: true,
   }),
 );
 
@@ -39,6 +40,27 @@ app.use(
     cookie: { secure: true },
   }),
 );
+
+// app.use('/api/products/images', (req, res, next) => {
+//   res.header('Access-Control-Allow-Origin', '*'); // Allow all origins for product images
+//   next();
+// });
+
+// app.use('/api/category/images', (req, res, next) => {
+//   res.header('Access-Control-Allow-Origin', '*'); // Allow all origins for caetgory images
+//   next();
+// });
+
+app.use('/api/products/images/:imageId', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*'); // Allow all origins for product images
+  next();
+});
+
+//categories
+app.use('/products/category/:id', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*'); // Allow all origins for product images
+  next();
+});
 
 app.get('/', (req, res) => {
   res.send(`Welcome to the Omorix API`);
