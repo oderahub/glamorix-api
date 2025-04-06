@@ -1452,7 +1452,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/Error'     
+  /admin/categories/{subCategoryId}/subsub:
+    post:
   /categories:
     get:
       summary: Get all categories
@@ -1554,6 +1556,105 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /categories/subcategory/{subcategoryId}:
+    get:
+      summary: Get subcategory details
+      tags:
+        - Public
+        - Categories
+      parameters:
+        - name: subcategoryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Subcategory details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Category'
+        '404':
+          description: Subcategory not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /categories/subcategory/{subcategoryId}/subsubcategories:
+    get:
+      summary: Get all subsubcategories under a subcategory
+      tags:
+        - Public
+        - Categories
+      parameters:
+        - name: subcategoryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Subsubcategories retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Category'
+        '404':
+          description: Subcategory not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /categories/subsubcategory/{subSubcategoryId}:
+    get:
+      summary: Get subsubcategory details
+      tags:
+        - Public
+        - Categories
+      parameters:
+        - name: subSubcategoryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Subsubcategory details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Category'
+        '404':
+          description: Subsubcategory not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
   /admin/categories/{id}:
     patch:
       summary: Update a category
