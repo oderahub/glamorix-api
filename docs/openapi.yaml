@@ -3659,59 +3659,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /wishlist/check/{productId}:
-    get:
-      summary: Check wishlist status
-      description: Checks if a product is in the authenticated user's wishlist.
-      tags:
-        - Wishlist
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: productId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-          description: The ID of the product to check
-          example: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
-      responses:
-        '200':
-          description: Wishlist status retrieved
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          inWishlist:
-                            type: boolean
-                            description: Whether the product is in the user's wishlist
-              examples:
-                inWishlist:
-                  summary: Product is in wishlist
-                  value:
-                    success: true
-                    message: "Wishlist status retrieved"
-                    data:
-                      inWishlist: true
-                    statusCode: 200
-                notInWishlist:
-                  summary: Product is not in wishlist
-                  value:
-                    success: true
-                    message: "Wishlist status retrieved"
-                    data:
-                      inWishlist: false
-                    statusCode: 200
-        '401':
-          description: Unauthorized - User must be authenticated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+  
+  
+  
+  
+  
