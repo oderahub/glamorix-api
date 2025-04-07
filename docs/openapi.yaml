@@ -166,33 +166,38 @@ components:
     Wishlist:
       type: object
       properties:
-      id:
-        type: string
-        format: uuid
-      userId:
-        type: string
-        format: uuid
-      productId:
-        type: string
-        format: uuid
-      product:
-        $ref: '#/components/schemas/Product'
-      createdAt:
-        type: string
-        format: date-time
-      updatedAt:
-        type: string
-        format: date-time
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        userId:
+          type: string
+          format: uuid
+          example: "7c0d7bb0-ae1a-4b7f-8d7f-5e3db1895e19"
+        productId:
+          type: string
+          format: uuid
+          example: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
+        product:
+          $ref: '#/components/schemas/Product'
+        createdAt:
+          type: string
+          format: date-time
+          example: "2023-11-15T08:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2023-11-15T08:30:00Z"
     WishlistAddSchema:
       type: object
       properties:
-      productId:
-        type: string
-        format: uuid
-        description: The ID of the product to add to the wishlist
+        productId:
+          type: string
+          format: uuid
+          description: The ID of the product to add to the wishlist
+          example: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
       required:
-        - productId
-    Category:
+        - productId Category:
       type: object
       properties:
         id:
