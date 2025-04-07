@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
   title: Omorix API
   description: API for the Omorix e-commerce platform, supporting both authenticated and guest users for cart and checkout operations.
@@ -1912,70 +1912,70 @@ paths:
                 $ref: '#/components/schemas/Error'
   /admin/products/{productId}/stock:
     patch:
-    summary: Update product variant stock
-    tags:
-      - Admin
-      - Products
-    security:
-      - bearerAuth: []
-    parameters:
-      - name: productId
-        in: path
-        required: true
-        description: ID of the product to update
-        schema:
-          type: string
-          format: uuid
-      - name: variantId
-        in: query
-        required: true
-        description: ID of the specific product variant to update
-        schema:
-          type: string
-          format: uuid
-    requestBody:
-      required: true
-      content:
-        application/json:
+      summary: Update product variant stock
+      tags:
+        - Admin
+        - Products
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: ID of the product to update
           schema:
-            type: object
-            properties:
-              stockQuantity:
-                type: integer
-                minimum: 0
-                description: The new stock quantity for the specified variant
-            required:
-              - stockQuantity
-    responses:
-      '200':
-        description: Stock updated successfully
+            type: string
+            format: uuid
+        - name: variantId
+          in: query
+          required: true
+          description: ID of the specific product variant to update
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
         content:
           application/json:
             schema:
-              allOf:
-                - $ref: '#/components/schemas/ApiResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/ProductVariant'
-      '400':
-        description: Bad request - Missing or invalid variantId parameter
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Error'
-      '403':
-        description: Forbidden - Admin access required
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Error'
-      '404':
-        description: Product or variant not found
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Error'
+              type: object
+              properties:
+                stockQuantity:
+                  type: integer
+                  minimum: 0
+                  description: The new stock quantity for the specified variant
+              required:
+                - stockQuantity
+      responses:
+        '200':
+          description: Stock updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ProductVariant'
+        '400':
+          description: Bad request - Missing or invalid variantId parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Product or variant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /admin/products/{id}/archive:
     patch:
       summary: Archive a product
@@ -3517,35 +3517,26 @@ paths:
                     success: true
                     message: "Wishlist retrieved successfully"
                     data:
-                      wishlist: [
-                        {
-                          id: "550e8400-e29b-41d4-a716-446655440000",
-                          userId: "7c0d7bb0-ae1a-4b7f-8d7f-5e3db1895e19",
-                          productId: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f",
-                          product: {
-                            id: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f",
-                            name: "Stylish T-Shirt",
-                            price: 29.99,
-                            images: [
-                              {
-                                id: "img-123",
-                                displayOrder: 0,
-                                isDefault: true,
+                      wishlist:
+                        - id: "550e8400-e29b-41d4-a716-446655440000"
+                          userId: "7c0d7bb0-ae1a-4b7f-8d7f-5e3db1895e19"
+                          productId: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
+                          product:
+                            id: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
+                            name: "Stylish T-Shirt"
+                            price: 29.99
+                            images:
+                              - id: "img-123"
+                                displayOrder: 0
+                                isDefault: true
                                 imageUrl: "https://example.com/api/products/images/img-123"
-                              }
-                            ],
                             featuredImageUrl: "https://example.com/api/products/images/img-123"
-                          },
-                          createdAt: "2023-11-15T08:30:00Z",
+                          createdAt: "2023-11-15T08:30:00Z"
                           updatedAt: "2023-11-15T08:30:00Z"
-                        }
-                      ],
-                      pagination: {
-                        limit: 10,
-                        offset: 0,
+                      pagination:
+                        limit: 10
+                        offset: 0
                         total: 1
-                      }
-                    }
                     statusCode: 200
         '401':
           description: Unauthorized - User must be authenticated
