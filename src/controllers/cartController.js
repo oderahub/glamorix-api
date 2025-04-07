@@ -200,6 +200,151 @@ export const getCart = async (req, res, next) => {
   }
 };
 
+// export const addToCart = async (req, res, next) => {
+//   const { productId, variantId, quantity } = req.body;
+//   let t;
+//   try {
+//     t = await sequelize.transaction();
+
+//     if (!variantId) {
+//       throw new Error('variantId is required');
+//     }
+//     if (quantity <= 0) {
+//       throw new Error('Quantity must be positive');
+//     }
+
+//     let cart;
+//     if (req.user && req.user.id) {
+//       console.log('AddToCart - Authenticated user:', req.user.id);
+//       cart = await Cart.findOne({
+//         where: { userId: req.user.id, status: CART_STATUS.ACTIVE },
+//         order: [['createdAt', 'ASC']],
+//         transaction: t,
+//       });
+//       if (!cart) {
+//         cart = await Cart.create(
+//           {
+//             userId: req.user.id,
+//             sessionId: null,
+//             status: CART_STATUS.ACTIVE,
+//             expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+//           },
+//           { transaction: t },
+//         );
+//       }
+//     } else {
+//       console.log('AddToCart - Guest user detected');
+//       const sessionId = req.session?.id || 'guest-session';
+//       console.log('AddToCart - Session ID:', sessionId);
+//       cart = await Cart.findOne({
+//         where: { sessionId, status: CART_STATUS.ACTIVE },
+//         order: [['createdAt', 'ASC']],
+//         transaction: t,
+//       });
+//       if (!cart) {
+//         cart = await Cart.create(
+//           {
+//             userId: null,
+//             sessionId,
+//             status: CART_STATUS.ACTIVE,
+//             expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+//           },
+//           { transaction: t },
+//         );
+//       }
+//     }
+
+//     console.log('AddToCart - Cart ID:', cart.id);
+
+//     const product = await Product.findByPk(productId, { transaction: t });
+//     if (!product) {
+//       throw new Error(ERROR_MESSAGES.PRODUCT_NOT_FOUND);
+//     }
+
+//     const productVariant = await ProductVariant.findByPk(variantId, { transaction: t });
+//     if (!productVariant || productVariant.productId !== productId) {
+//       throw new Error('Invalid product variant');
+//     }
+//     if (productVariant.stockQuantity < quantity) {
+//       throw new Error('Insufficient stock for variant');
+//     }
+
+//     const unitPrice = parseFloat(productVariant.price || product.price);
+//     if (isNaN(unitPrice) || unitPrice <= 0) {
+//       throw new Error(`Invalid price for product: ${productVariant.price || product.price}`);
+//     }
+
+//     const existingItem = await CartItem.findOne({
+//       where: { cartId: cart.id, productId, variantId },
+//       transaction: t,
+//     });
+
+//     if (existingItem) {
+//       existingItem.quantity += quantity;
+//       await existingItem.update({ quantity: existingItem.quantity, unitPrice }, { transaction: t });
+//     } else {
+//       await CartItem.create(
+//         {
+//           cartId: cart.id,
+//           productId,
+//           variantId,
+//           quantity,
+//           unitPrice,
+//           addedAt: new Date(),
+//         },
+//         { transaction: t },
+//       );
+//     }
+
+//     await t.commit();
+//     console.log('Transaction committed, cartId:', cart.id);
+
+//     const cartItems = await getCartItems(cart.id);
+//     if (!cartItems.length) {
+//       console.warn('No items found after adding to cart:', cart.id);
+//     }
+
+//     const subtotal = cartItems.reduce(
+//       (sum, item) => sum + parseFloat(item.unitPrice) * item.quantity,
+//       0,
+//     );
+//     const discount = 0; // No coupon system
+//     const shipping = 0; // No shipping method at this stage
+//     const tax = 0; // No tax info at this stage
+//     const grandTotal = subtotal - discount + shipping + tax;
+
+//     return ApiResponse.success(res, 'Item added to cart', {
+//       cartItems: cartItems.map((item) => ({
+//         id: item.id,
+//         cartId: item.cartId,
+//         productId: item.productId,
+//         variantId: item.variantId,
+//         quantity: item.quantity,
+//         unitPrice: parseFloat(item.unitPrice),
+//         addedAt: item.addedAt,
+//         createdAt: item.createdAt,
+//         updatedAt: item.updatedAt,
+//         product: item.product,
+//       })),
+//       summary: {
+//         subtotal: parseFloat(subtotal.toFixed(2)),
+//         discount: parseFloat(discount.toFixed(2)),
+//         shipping: parseFloat(shipping.toFixed(2)),
+//         tax: parseFloat(tax.toFixed(2)),
+//         grandTotal: parseFloat(grandTotal.toFixed(2)),
+//         itemCount: cartItems.length,
+//       },
+//     });
+//   } catch (error) {
+//     if (t && !t.finished) {
+//       await t.rollback();
+//       console.error('Transaction rolled back:', error.message);
+//     }
+//     console.error('Error in addToCart:', error.message, error.stack);
+//     next(error);
+//   }
+// };
+
 export const addToCart = async (req, res, next) => {
   const { productId, variantId, quantity } = req.body;
   let t;
@@ -213,45 +358,91 @@ export const addToCart = async (req, res, next) => {
       throw new Error('Quantity must be positive');
     }
 
+    // Log complete authentication info for debugging
+    console.log('AddToCart - Auth info:', {
+      hasUser: !!req.user,
+      userId: req.user?.id,
+      sessionId: req.session?.id,
+    });
+
     let cart;
+    // For authenticated users with a valid user ID
     if (req.user && req.user.id) {
       console.log('AddToCart - Authenticated user:', req.user.id);
+
+      // First try to find an existing cart
       cart = await Cart.findOne({
-        where: { userId: req.user.id, status: CART_STATUS.ACTIVE },
+        where: {
+          userId: req.user.id,
+          status: CART_STATUS.ACTIVE,
+        },
         order: [['createdAt', 'ASC']],
         transaction: t,
       });
+
+      // If no cart exists, create a new one
       if (!cart) {
-        cart = await Cart.create(
-          {
-            userId: req.user.id,
-            sessionId: null,
-            status: CART_STATUS.ACTIVE,
-            expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          },
-          { transaction: t },
-        );
+        console.log('AddToCart - Creating new cart for user:', req.user.id);
+        try {
+          cart = await Cart.create(
+            {
+              userId: req.user.id,
+              sessionId: null,
+              status: CART_STATUS.ACTIVE,
+              expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            },
+            { transaction: t },
+          );
+          console.log('AddToCart - New cart created:', cart.id);
+        } catch (cartError) {
+          console.error('Error creating cart for authenticated user:', cartError);
+          throw cartError;
+        }
       }
-    } else {
+    }
+    // For guest users
+    else {
       console.log('AddToCart - Guest user detected');
-      const sessionId = req.session?.id || 'guest-session';
-      console.log('AddToCart - Session ID:', sessionId);
+
+      // Create a reliable session ID even if req.session is not set
+      const sessionId =
+        req.session?.id || `guest-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+      console.log('AddToCart - Using Session ID:', sessionId);
+
+      // First try to find an existing guest cart
       cart = await Cart.findOne({
-        where: { sessionId, status: CART_STATUS.ACTIVE },
+        where: {
+          sessionId,
+          userId: null, // Explicitly look for null userId
+          status: CART_STATUS.ACTIVE,
+        },
         order: [['createdAt', 'ASC']],
         transaction: t,
       });
+
+      // If no cart exists, create a new one
       if (!cart) {
-        cart = await Cart.create(
-          {
-            userId: null,
-            sessionId,
-            status: CART_STATUS.ACTIVE,
-            expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          },
-          { transaction: t },
-        );
+        console.log('AddToCart - Creating new cart for guest session:', sessionId);
+        try {
+          cart = await Cart.create(
+            {
+              userId: null, // Explicitly set to null
+              sessionId,
+              status: CART_STATUS.ACTIVE,
+              expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            },
+            { transaction: t },
+          );
+          console.log('AddToCart - New guest cart created:', cart.id);
+        } catch (cartError) {
+          console.error('Error creating cart for guest:', cartError);
+          throw cartError;
+        }
       }
+    }
+
+    if (!cart) {
+      throw new Error('Failed to create or retrieve cart');
     }
 
     console.log('AddToCart - Cart ID:', cart.id);
