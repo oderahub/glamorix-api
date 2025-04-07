@@ -197,39 +197,7 @@ components:
           description: The ID of the product to add to the wishlist
           example: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
       required:
-        - productId Category:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        slug:
-          type: string
-        description:
-          type: string
-          nullable: true
-        parentId:
-          type: string
-          format: uuid
-          nullable: true
-        image:
-          type: string
-          format: uri
-          nullable: true
-          description: URL of the uploaded image after processing
-        isActive:
-          type: boolean
-        displayOrder:
-          type: integer
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
+        - productId
     CategoryCreateSchema:
       type: object
       properties:
