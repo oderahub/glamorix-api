@@ -21,18 +21,18 @@ const wishlistAddSchema = Joi.object({
 router.use(authenticateToken);
 
 // Add product to wishlist
-router.post('/wishlist', validateRequest(wishlistAddSchema), addToWishlist);
+router.post('/', validateRequest(wishlistAddSchema), addToWishlist);
 
 // Remove product from wishlist
-router.delete('/wishlist/:productId', removeFromWishlist);
+router.delete('/:productId', removeFromWishlist);
 
 // Get user's wishlist
-router.get('/wishlist', getWishlist);
+router.get('/', getWishlist);
 
 // Check if a product is in the user's wishlist
-router.get('/wishlist/check/:productId', checkWishlistStatus);
+router.get('/check/:productId', checkWishlistStatus);
 
 // Clear entire wishlist
-router.delete('/wishlist', clearWishlist);
+router.delete('/', clearWishlist);
 
 export default router;

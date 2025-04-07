@@ -3427,6 +3427,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+ 
+    get:
+      summary: Check wishlist status
+      description: Checks if a product is in the authenticated user's wishlist.
+      tags:
+        - Wishlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the product to check
+      responses:
+        '200':
+          description: Wishlist status retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          inWishlist:
+                            type: boolean
+                            description: Whether the product is in the user's wishlist
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /wishlist:
     post:
       summary: Add product to wishlist
@@ -3441,6 +3479,11 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/WishlistAddSchema'
+            examples:
+              wishlist:
+                summary: Add product to wishlist
+                value:
+                  productId: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
       responses:
         '201':
           description: Product added to wishlist successfully
@@ -3453,6 +3496,19 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/Wishlist'
+              examples:
+                success:
+                  summary: Successful response
+                  value:
+                    success: true
+                    message: "Product added to wishlist successfully"
+                    data:
+                      id: "550e8400-e29b-41d4-a716-446655440000"
+                      userId: "7c0d7bb0-ae1a-4b7f-8d7f-5e3db1895e19"
+                      productId: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
+                      createdAt: "2023-11-15T08:30:00Z"
+                      updatedAt: "2023-11-15T08:30:00Z"
+                    statusCode: 201
         '400':
           description: Validation error
           content:
@@ -3515,6 +3571,43 @@ paths:
                                 type: integer
                               total:
                                 type: integer
+              examples:
+                success:
+                  summary: Successful response
+                  value:
+                    success: true
+                    message: "Wishlist retrieved successfully"
+                    data:
+                      wishlist: [
+                        {
+                          id: "550e8400-e29b-41d4-a716-446655440000",
+                          userId: "7c0d7bb0-ae1a-4b7f-8d7f-5e3db1895e19",
+                          productId: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f",
+                          product: {
+                            id: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f",
+                            name: "Stylish T-Shirt",
+                            price: 29.99,
+                            images: [
+                              {
+                                id: "img-123",
+                                displayOrder: 0,
+                                isDefault: true,
+                                imageUrl: "https://example.com/api/products/images/img-123"
+                              }
+                            ],
+                            featuredImageUrl: "https://example.com/api/products/images/img-123"
+                          },
+                          createdAt: "2023-11-15T08:30:00Z",
+                          updatedAt: "2023-11-15T08:30:00Z"
+                        }
+                      ],
+                      pagination: {
+                        limit: 10,
+                        offset: 0,
+                        total: 1
+                      }
+                    }
+                    statusCode: 200
         '401':
           description: Unauthorized - User must be authenticated
           content:
@@ -3535,6 +3628,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse'
+              examples:
+                success:
+                  summary: Successful response
+                  value:
+                    success: true
+                    message: "Wishlist cleared successfully"
+                    data: null
+                    statusCode: 204
         '401':
           description: Unauthorized - User must be authenticated
           content:
@@ -3557,6 +3658,7 @@ paths:
             type: string
             format: uuid
           description: The ID of the product to remove from wishlist
+          example: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
       responses:
         '204':
           description: Product removed from wishlist successfully
@@ -3564,6 +3666,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse'
+              examples:
+                success:
+                  summary: Successful response
+                  value:
+                    success: true
+                    message: "Product removed from wishlist successfully"
+                    data: null
+                    statusCode: 204
         '401':
           description: Unauthorized - User must be authenticated
           content:
@@ -3592,6 +3702,7 @@ paths:
             type: string
             format: uuid
           description: The ID of the product to check
+          example: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
       responses:
         '200':
           description: Wishlist status retrieved
@@ -3608,6 +3719,23 @@ paths:
                           inWishlist:
                             type: boolean
                             description: Whether the product is in the user's wishlist
+              examples:
+                inWishlist:
+                  summary: Product is in wishlist
+                  value:
+                    success: true
+                    message: "Wishlist status retrieved"
+                    data:
+                      inWishlist: true
+                    statusCode: 200
+                notInWishlist:
+                  summary: Product is not in wishlist
+                  value:
+                    success: true
+                    message: "Wishlist status retrieved"
+                    data:
+                      inWishlist: false
+                    statusCode: 200
         '401':
           description: Unauthorized - User must be authenticated
           content:

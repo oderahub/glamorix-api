@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1200 900" xmlns="http://www.w3.org/2000/svg">
+  <!-- Styling -->
+  <defs>
+    <style>
+      .title { font-size: 24px; font-weight: bold; font-family: Arial; }
+      .class-title { font-size: 16px; font-weight: bold; font-family: Arial; text-anchor: middle; }
+      .class-attr { font-size: 12px; font-family: Arial; }
+      .class-box { fill: #E6F3FF; stroke: #3366CC; stroke-width: 2; }
+      .connector { stroke: #666666; stroke-width: 1.5; fill: none; }
+      .cardinality { font-size: 12px; font-family: Arial; fill: #333333; }
+      .inheritance { stroke: #666666; stroke-width: 1.5; fill: none; marker-end: url(#inheritance-marker); }
+      .association { stroke: #666666; stroke-width: 1.5; fill: none; }
+      .composition { stroke: #666666; stroke-width: 1.5; fill: none; marker-end: url(#composition-marker); }
+    </style>
+    <!-- Arrow markers -->
+    <marker id="inheritance-marker" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 L5,5 Z" fill="white" stroke="#666666" stroke-width="1"/>
+    </marker>
+    <marker id="composition-marker" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto">
+      <path d="M2,3 L5,5 L2,7 L0,5 Z" fill="black"/>
+    </marker>
+    <marker id="one-marker" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <line x1="0" y1="5" x2="5" y2="5" stroke="black" stroke-width="1.5"/>
+      <line x1="5" y1="0" x2="5" y2="10" stroke="black" stroke-width="1.5"/>
+    </marker>
+    <marker id="many-marker" markerWidth="15" markerHeight="10" refX="5" refY="5" orient="auto">
+      <path d="M0,5 L5,0 M0,5 L5,10" stroke="black" stroke-width="1.5" fill="none"/>
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="600" y="40" class="title" text-anchor="middle">Omorix Website Database Schema: UML Class Diagram</text>
+
+  <!-- User Class -->
+  <rect x="100" y="80" width="180" height="200" rx="5" ry="5" class="class-box"/>
+  <text x="190" y="100" class="class-title">User</text>
+  <line x1="100" y1="110" x2="280" y2="110" stroke="#3366CC" stroke-width="1"/>
+  <text x="110" y="130" class="class-attr">id: UUID (PK)</text>
+  <text x="110" y="150" class="class-attr">email: STRING</text>
+  <text x="110" y="170" class="class-attr">password: STRING</text>
+  <text x="110" y="190" class="class-attr">isVerified: BOOLEAN</text>
+  <text x="110" y="210" class="class-attr">role: ENUM</text>
+  <text x="110" y="230" class="class-attr">status: ENUM</text>
+  <text x="110" y="250" class="class-attr">lastLogin: DATE</text>
+  <text x="110" y="270" class="class-attr">timestamps, paranoid</text>
+
+  <!-- Customer Class -->
+  <rect x="100" y="320" width="180" height="150" rx="5" ry="5" class="class-box"/>
+  <text x="190" y="340" class="class-title">Customer</text>
+  <line x1="100" y1="350" x2="280" y2="350" stroke="#3366CC" stroke-width="1"/>
+  <text x="110" y="370" class="class-attr">id: UUID (PK)</text>
+  <text x="110" y="390" class="class-attr">userId: UUID (FK)</text>
+  <text x="110" y="410" class="class-attr">firstName: STRING</text>
+  <text x="110" y="430" class="class-attr">lastName: STRING</text>
+  <text x="110" y="450" class="class-attr">phone: STRING</text>
+  <text x="110" y="470" class="class-attr">address: TEXT</text>
+
+  <!-- Address Class -->
+  <rect x="100" y="520" width="180" height="180" rx="5" ry="5" class="class-box"/>
+  <text x="190" y="540" class="class-title">Address</text>
+  <line x1="100" y1="550" x2="280" y2="550" stroke="#3366CC" stroke-width="1"/>
+  <text x="110" y="570" class="class-attr">id: UUID (PK)</text>
+  <text x="110" y="590" class="class-attr">userId: UUID (FK)</text>
+  <text x="110" y="610" class="class-attr">firstName: STRING</text>
+  <text x="110" y="630" class="class-attr">lastName: STRING</text>
+  <text x="110" y="650" class="class-attr">streetAddress: STRING</text>
+  <text x="110" y="670" class="class-attr">city: STRING</text>
+  <text x="110" y="690" class="class-attr">country: STRING</text>
+  <text x="110" y="710" class="class-attr">isDefault: BOOLEAN</text>
+
+  <!-- Order Class -->
+  <rect x="320" y="80" width="180" height="220" rx="5" ry="5" class="class-box"/>
+  <text x="410" y="100" class="class-title">Order</text>
+  <line x1="320" y1="110" x2="500" y2="110" stroke="#3366CC" stroke-width="1"/>
+  <text x="330" y="130" class="class-attr">id: UUID (PK)</text>
+  <text x="330" y="150" class="class-attr">userId: UUID (FK)</text>
+  <text x="330" y="170" class="class-attr">orderNumber: STRING</text>
+  <text x="330" y="190" class="class-attr">status: ENUM</text>
+  <text x="330" y="210" class="class-attr">totalAmount: DECIMAL</text>
+  <text x="330" y="230" class="class-attr">paymentMethod: ENUM</text>
+  <text x="330" y="250" class="class-attr">paymentStatus: ENUM</text>
+  <text x="330" y="270" class="class-attr">shippingMethod: ENUM</text>
+  <text x="330" y="290" class="class-attr">email: STRING</text>
+  <text x="330" y="310" class="class-attr">...other fields</text>
+
+  <!-- OrderItem Class -->
+  <rect x="320" y="340" width="180" height="170" rx="5" ry="5" class="class-box"/>
+  <text x="410" y="360" class="class-title">OrderItem</text>
+  <line x1="320" y1="370" x2="500" y2="370" stroke="#3366CC" stroke-width="1"/>
+  <text x="330" y="390" class="class-attr">id: UUID (PK)</text>
+  <text x="330" y="410" class="class-attr">orderId: UUID (FK)</text>
+  <text x="330" y="430" class="class-attr">productId: UUID (FK)</text>
+  <text x="330" y="450" class="class-attr">variantId: UUID (FK)</text>
+  <text x="330" y="470" class="class-attr">quantity: INTEGER</text>
+  <text x="330" y="490" class="class-attr">unitPrice: DECIMAL</text>
+  <text x="330" y="510" class="class-attr">subtotal: DECIMAL</text>
+  <text x="330" y="530" class="class-attr">isRefunded: BOOLEAN</text>
+
+  <!-- Cart and CartItem Classes -->
+  <rect x="320" y="550" width="180" height="130" rx="5" ry="5" class="class-box"/>
+  <text x="410" y="570" class="class-title">Cart</text>
+  <line x1="320" y1="580" x2="500" y2="580" stroke="#3366CC" stroke-width="1"/>
+  <text x="330" y="600" class="class-attr">id: UUID (PK)</text>
+  <text x="330" y="620" class="class-attr">userId: UUID (FK)</text>
+  <text x="330" y="640" class="class-attr">sessionId: STRING</text>
+  <text x="330" y="660" class="class-attr">status: ENUM</text>
+  <text x="330" y="680" class="class-attr">expiryDate: DATE</text>
+
+  <rect x="320" y="720" width="180" height="150" rx="5" ry="5" class="class-box"/>
+  <text x="410" y="740" class="class-title">CartItem</text>
+  <line x1="320" y1="750" x2="500" y2="750" stroke="#3366CC" stroke-width="1"/>
+  <text x="330" y="770" class="class-attr">id: UUID (PK)</text>
+  <text x="330" y="790" class="class-attr">cartId: UUID (FK)</text>
+  <text x="330" y="810" class="class-attr">productId: UUID (FK)</text>
+  <text x="330" y="830" class="class-attr">variantId: UUID (FK)</text>
+  <text x="330" y="850" class="class-attr">quantity: INTEGER</text>
+  <text x="330" y="870" class="class-attr">addedAt: DATE</text>
+
+  <!-- Product Related Classes -->
+  <rect x="540" y="80" width="180" height="200" rx="5" ry="5" class="class-box"/>
+  <text x="630" y="100" class="class-title">Product</text>
+  <line x1="540" y1="110" x2="720" y2="110" stroke="#3366CC" stroke-width="1"/>
+  <text x="550" y="130" class="class-attr">id: UUID (PK)</text>
+  <text x="550" y="150" class="class-attr">name: STRING</text>
+  <text x="550" y="170" class="class-attr">slug: STRING</text>
+  <text x="550" y="190" class="class-attr">description: TEXT</text>
+  <text x="550" y="210" class="class-attr">price: DECIMAL</text>
+  <text x="550" y="230" class="class-attr">stockQuantity: INTEGER</text>
+  <text x="550" y="250" class="class-attr">sku: STRING</text>
+  <text x="550" y="270" class="class-attr">isActive: ENUM</text>
+  <text x="550" y="290" class="class-attr">featuredImage: TEXT</text>
+
+  <!-- ProductVariant Class -->
+  <rect x="540" y="320" width="180" height="170" rx="5" ry="5" class="class-box"/>
+  <text x="630" y="340" class="class-title">ProductVariant</text>
+  <line x1="540" y1="350" x2="720" y2="350" stroke="#3366CC" stroke-width="1"/>
+  <text x="550" y="370" class="class-attr">id: UUID (PK)</text>
+  <text x="550" y="390" class="class-attr">productId: UUID (FK)</text>
+  <text x="550" y="410" class="class-attr">size: STRING</text>
+  <text x="550" y="430" class="class-attr">color: STRING</text>
+  <text x="550" y="450" class="class-attr">material: STRING</text>
+  <text x="550" y="470" class="class-attr">price: DECIMAL</text>
+  <text x="550" y="490" class="class-attr">stockQuantity: INTEGER</text>
+  <text x="550" y="510" class="class-attr">sku: STRING</text>
+
+  <!-- ProductImage Class -->
+  <rect x="540" y="530" width="180" height="130" rx="5" ry="5" class="class-box"/>
+  <text x="630" y="550" class="class-title">ProductImage</text>
+  <line x1="540" y1="560" x2="720" y2="560" stroke="#3366CC" stroke-width="1"/>
+  <text x="550" y="580" class="class-attr">id: UUID (PK)</text>
+  <text x="550" y="600" class="class-attr">productId: UUID (FK)</text>
+  <text x="550" y="620" class="class-attr">imageData: TEXT</text>
+  <text x="550" y="640" class="class-attr">mimeType: STRING</text>
+  <text x="550" y="660" class="class-attr">isDefault: BOOLEAN</text>
+
+  <!-- Category Class -->
+  <rect x="760" y="80" width="180" height="180" rx="5" ry="5" class="class-box"/>
+  <text x="850" y="100" class="class-title">Category</text>
+  <line x1="760" y1="110" x2="940" y2="110" stroke="#3366CC" stroke-width="1"/>
+  <text x="770" y="130" class="class-attr">id: UUID (PK)</text>
+  <text x="770" y="150" class="class-attr">name: STRING</text>
+  <text x="770" y="170" class="class-attr">slug: STRING</text>
+  <text x="770" y="190" class="class-attr">description: TEXT</text>
+  <text x="770" y="210" class="class-attr">parentId: UUID (FK)</text>
+  <text x="770" y="230" class="class-attr">image: TEXT</text>
+  <text x="770" y="250" class="class-attr">isActive: BOOLEAN</text>
+  <text x="770" y="270" class="class-attr">displayOrder: INTEGER</text>
+
+  <!-- ProductCategory Class -->
+  <rect x="760" y="320" width="180" height="130" rx="5" ry="5" class="class-box"/>
+  <text x="850" y="340" class="class-title">ProductCategory</text>
+  <line x1="760" y1="350" x2="940" y2="350" stroke="#3366CC" stroke-width="1"/>
+  <text x="770" y="370" class="class-attr">id: UUID (PK)</text>
+  <text x="770" y="390" class="class-attr">productId: UUID (FK)</text>
+  <text x="770" y="410" class="class-attr">categoryId: UUID (FK)</text>
+  <text x="770" y="430" class="class-attr">isPrimary: BOOLEAN</text>
+  <text x="770" y="450" class="class-attr">timestamps, paranoid</text>
+
+  <!-- Review Class -->
+  <rect x="760" y="500" width="180" height="170" rx="5" ry="5" class="class-box"/>
+  <text x="850" y="520" class="class-title">Review</text>
+  <line x1="760" y1="530" x2="940" y2="530" stroke="#3366CC" stroke-width="1"/>
+  <text x="770" y="550" class="class-attr">id: UUID (PK)</text>
+  <text x="770" y="570" class="class-attr">userId: UUID (FK)</text>
+  <text x="770" y="590" class="class-attr">productId: UUID (FK)</text>
+  <text x="770" y="610" class="class-attr">rating: INTEGER</text>
+  <text x="770" y="630" class="class-attr">title: STRING</text>
+  <text x="770" y="650" class="class-attr">comment: TEXT</text>
+  <text x="770" y="670" class="class-attr">isVerifiedPurchase: BOOLEAN</text>
+
+  <!-- Wishlist Class -->
+  <rect x="980" y="80" width="180" height="120" rx="5" ry="5" class="class-box"/>
+  <text x="1070" y="100" class="class-title">Wishlist</text>
+  <line x1="980" y1="110" x2="1160" y2="110" stroke="#3366CC" stroke-width="1"/>
+  <text x="990" y="130" class="class-attr">id: UUID (PK)</text>
+  <text x="990" y="150" class="class-attr">userId: UUID (FK)</text>
+  <text x="990" y="170" class="class-attr">productId: UUID (FK)</text>
+  <text x="990" y="190" class="class-attr">timestamps</text>
+
+  <!-- AdminLog Class -->
+  <rect x="980" y="250" width="180" height="150" rx="5" ry="5" class="class-box"/>
+  <text x="1070" y="270" class="class-title">AdminLog</text>
+  <line x1="980" y1="280" x2="1160" y2="280" stroke="#3366CC" stroke-width="1"/>
+  <text x="990" y="300" class="class-attr">id: UUID (PK)</text>
+  <text x="990" y="320" class="class-attr">userId: UUID (FK)</text>
+  <text x="990" y="340" class="class-attr">action: STRING</text>
+  <text x="990" y="360" class="class-attr">entity: STRING</text>
+  <text x="990" y="380" class="class-attr">entityId: UUID</text>
+  <text x="990" y="400" class="class-attr">details: JSON</text>
+
+  <!-- Relationship Lines -->
+  <!-- User - Customer -->
+  <line x1="190" y1="280" x2="190" y2="320" class="connector"/>
+  <text x="170" y="305" class="cardinality">1</text>
+  <text x="195" y="305" class="cardinality">1</text>
+
+  <!-- User - Address -->
+  <line x1="165" y1="470" x2="165" y2="520" class="connector"/>
+  <text x="145" y="500" class="cardinality">1</text>
+  <text x="170" y="500" class="cardinality">n</text>
+
+  <!-- User - Order -->
+  <line x1="280" y1="150" x2="320" y2="150" class="connector"/>
+  <text x="290" y="140" class="cardinality">1</text>
+  <text x="310" y="140" class="cardinality">n</text>
+
+  <!-- Order - OrderItem -->
+  <line x1="410" y1="300" x2="410" y2="340" class="connector"/>
+  <text x="395" y="320" class="cardinality">1</text>
+  <text x="415" y="320" class="cardinality">n</text>
+
+  <!-- Product - OrderItem -->
+  <line x1="500" y1="430" x2="540" y2="230" class="connector"/>
+  <text x="510" y="320" class="cardinality">1</text>
+  <text x="530" y="320" class="cardinality">n</text>
+
+  <!-- Product - ProductVariant -->
+  <line x1="630" y1="280" x2="630" y2="320" class="connector"/>
+  <text x="615" y="300" class="cardinality">1</text>
+  <text x="635" y="300" class="cardinality">n</text>
+
+  <!-- Product - ProductImage -->
+  <line x1="610" y1="280" x2="610" y2="530" class="connector"/>
+  <text x="595" y="400" class="cardinality">1</text>
+  <text x="615" y="400" class="cardinality">n</text>
+
+  <!-- Product - Category (through ProductCategory) -->
+  <path d="M720,180 Q740,180 740,250 Q740,320 760,320" class="connector"/>
+  <text x="730" y="220" class="cardinality">n</text>
+  <text x="750" y="300" class="cardinality">n</text>
+
+  <!-- Category self-referencing -->
+  <path d="M940,160 Q970,160 970,130 Q970,100 940,100" class="connector"/>
+  <text x="950" y="130" class="cardinality">1</text>
+  <text x="950" y="90" class="cardinality">n</text>
+
+  <!-- User - Review -->
+  <path d="M280,240 Q830,240 830,500" class="connector"/>
+  <text x="500" y="230" class="cardinality">1</text>
+  <text x="820" y="480" class="cardinality">n</text>
+
+  <!-- Product - Review -->
+  <line x1="720" y1="240" x2="760" y2="560" class="connector"/>
+  <text x="730" y="400" class="cardinality">1</text>
+  <text x="750" y="540" class="cardinality">n</text>
+
+  <!-- User - Cart -->
+  <path d="M280,180 Q410,180 410,550" class="connector"/>
+  <text x="350" y="170" class="cardinality">1</text>
+  <text x="400" y="530" class="cardinality">n</text>
+
+  <!-- Cart - CartItem -->
+  <line x1="410" y1="680" x2="410" y2="720" class="connector"/>
+  <text x="395" y="700" class="cardinality">1</text>
+  <text x="415" y="700" class="cardinality">n</text>
+
+  <!-- Product - CartItem -->
+  <path d="M540,200 Q510,200 510,650 Q510,810 500,810" class="connector"/>
+  <text x="520" y="200" class="cardinality">1</text>
+  <text x="500" y="790" class="cardinality">n</text>
+
+  <!-- User - Wishlist -->
+  <path d="M280,120 Q650,120 1000,120" class="connector"/>
+  <text x="650" y="110" class="cardinality">1</text>
+  <text x="980" y="110" class="cardinality">n</text>
+
+  <!-- Product - Wishlist -->
+  <line x1="720" y1="120" x2="980" y2="120" class="connector"/>
+  <text x="740" y="110" class="cardinality">1</text>
+  <text x="960" y="110" class="cardinality">n</text>
+
+  <!-- User - AdminLog -->
+  <path d="M280,210 Q650,210 980,300" class="connector"/>
+  <text x="650" y="200" class="cardinality">1</text>
+  <text x="960" y="290" class="cardinality">n</text>
+</svg>

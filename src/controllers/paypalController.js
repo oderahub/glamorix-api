@@ -101,66 +101,6 @@ export const createPaymentOrder = async (req, res, next) => {
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
-// export const capturePayment = async (req, res, next) => {
-//     const { paypalOrderId } = req.params;
-
-//     let transaction;
-//     try {
-//         transaction = await sequelize.transaction();
-
-//         // Find the order by PayPal order ID
-//         const order = await Order.findOne({
-//             where: { paypalOrderId },
-//             include: [{ model: OrderItem, as: 'items' }],
-//             transaction
-//         });
-
-//         if (!order) {
-//             if (transaction) await transaction.rollback();
-//             return ApiResponse.error(res, ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
-//         }
-
-//         // Capture the payment
-//         const captureData = await capturePayPalPayment(paypalOrderId);
-
-//         // Update the order with payment details
-//         const captureId = captureData.purchase_units[0].payments.captures[0].id;
-//         const paymentStatus = captureData.status === 'COMPLETED' ? PAYMENT_STATUS.PAID : PAYMENT_STATUS.PENDING;
-
-//         await order.update({
-//             status: ORDER_STATUS.PROCESSING,
-//             paymentStatus,
-//             paypalCaptureId: captureId,
-//             paidAt: new Date()
-//         }, { transaction });
-
-//         // If payment is successful, send confirmation email
-//         if (paymentStatus === PAYMENT_STATUS.PAID) {
-//             await sendOrderConfirmationEmail(order.email, order, order.items);
-//         }
-
-//         await transaction.commit();
-
-//         return ApiResponse.success(res, 'Payment captured successfully', {
-//             orderId: order.id,
-//             orderNumber: order.orderNumber,
-//             status: order.status,
-//             paymentStatus,
-//             captureId
-//         });
-//     } catch (error) {
-//         if (transaction) await transaction.rollback();
-//         console.error('Error capturing PayPal payment:', error);
-//         next(error);
-//     }
-// };
-
-/**
- * Capture a PayPal payment
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next middleware function
- */
 export const capturePayment = async (req, res, next) => {
   const { paypalOrderId } = req.params;
 
