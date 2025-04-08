@@ -1,0 +1,280 @@
+// Updates to reviewController.js to remove approval requirement
+
+import { Review, User, Product, Order, OrderItem } from '../models/index.js';
+import ApiResponse from '../utils/ApiResponse.js';
+import { HTTP_STATUS_CODES, ERROR_MESSAGES } from '../constants/constant.js';
+import { Op } from 'sequelize';
+
+// Helper function to check if user has purchased a product
+const hasUserPurchasedProduct = async (userId, productId) => {
+  const orders = await Order.findAll({
+    where: {
+      userId,
+      status: { [Op.in]: ['delivered', 'completed'] }, // Only consider completed orders
+    },
+    include: [
+      {
+        model: OrderItem,
+        as: 'items',
+        where: { productId },
+        required: true,
+      },
+    ],
+  });
+
+  return orders.length > 0;
+};
+
+// Add or update a review - no approval required
+export const addReview = async (req, res, next) => {
+  try {
+    const { productId, rating, title, comment } = req.body;
+    const userId = req.user.id;
+
+    // Validate product exists
+    const product = await Product.findByPk(productId);
+    if (!product) {
+      return ApiResponse.error(res, ERROR_MESSAGES.PRODUCT_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
+    }
+
+    // Check if user has purchased the product
+    const hasPurchased = await hasUserPurchasedProduct(userId, productId);
+
+    // Check if user has already reviewed this product
+    let existingReview = await Review.findOne({
+      where: { userId, productId },
+    });
+
+    if (existingReview) {
+      // Update existing review
+      existingReview = await existingReview.update({
+        rating,
+        title,
+        comment,
+        isVerifiedPurchase: hasPurchased,
+        // All reviews are now automatically approved
+        isApproved: true,
+      });
+
+      return ApiResponse.success(
+        res,
+        'Review updated successfully',
+        existingReview,
+        HTTP_STATUS_CODES.OK,
+      );
+    } else {
+      // Create new review
+      if (!hasPurchased) {
+        return ApiResponse.error(
+          res,
+          'You can only review products you have purchased',
+          HTTP_STATUS_CODES.FORBIDDEN,
+        );
+      }
+
+      const newReview = await Review.create({
+        userId,
+        productId,
+        rating,
+        title,
+        comment,
+        isVerifiedPurchase: true,
+        // Auto-approve all reviews
+        isApproved: true,
+      });
+
+      return ApiResponse.success(
+        res,
+        'Review submitted successfully',
+        newReview,
+        HTTP_STATUS_CODES.CREATED,
+      );
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get all reviews for a product - no approval filter
+export const getProductReviews = async (req, res, next) => {
+  try {
+    const { productId } = req.params;
+    const { limit = 10, offset = 0, sort = 'newest' } = req.query;
+
+    // Validate product exists
+    const product = await Product.findByPk(productId);
+    if (!product) {
+      return ApiResponse.error(res, ERROR_MESSAGES.PRODUCT_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
+    }
+
+    // Define sorting order
+    let order;
+    switch (sort) {
+      case 'highest':
+        order = [['rating', 'DESC']];
+        break;
+      case 'lowest':
+        order = [['rating', 'ASC']];
+        break;
+      case 'newest':
+      default:
+        order = [['createdAt', 'DESC']];
+    }
+
+    // Get all reviews (no approval filter)
+    const reviews = await Review.findAndCountAll({
+      where: {
+        productId,
+        // No isApproved filter
+      },
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id'],
+          include: [
+            {
+              model: 'Customer',
+              as: 'customerProfile',
+              attributes: ['firstName', 'lastName'],
+            },
+          ],
+        },
+      ],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order,
+    });
+
+    // Calculate review statistics
+    const stats = await Review.findAll({
+      where: {
+        productId,
+        // No isApproved filter
+      },
+      attributes: ['rating', [sequelize.fn('COUNT', sequelize.col('rating')), 'count']],
+      group: ['rating'],
+    });
+
+    // Format review statistics
+    const ratingStats = {
+      avgRating: 0,
+      totalReviews: reviews.count,
+      distribution: {
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0,
+        5: 0,
+      },
+    };
+
+    let totalRatingSum = 0;
+    stats.forEach((stat) => {
+      const rating = stat.rating;
+      const count = parseInt(stat.dataValues.count);
+      ratingStats.distribution[rating] = count;
+      totalRatingSum += rating * count;
+    });
+
+    // Calculate average rating (if there are reviews)
+    if (reviews.count > 0) {
+      ratingStats.avgRating = parseFloat((totalRatingSum / reviews.count).toFixed(1));
+    }
+
+    return ApiResponse.success(
+      res,
+      'Reviews retrieved successfully',
+      {
+        reviews: reviews.rows,
+        pagination: {
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          total: reviews.count,
+        },
+        stats: ratingStats,
+      },
+      HTTP_STATUS_CODES.OK,
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Other methods updated similarly to remove approval filters...
+
+// Admin methods - simplified to just allow deletion
+export const adminGetAllReviews = async (req, res, next) => {
+  try {
+    const { limit = 10, offset = 0, sort = 'newest' } = req.query;
+
+    // Define sorting order
+    let order;
+    switch (sort) {
+      case 'oldest':
+        order = [['createdAt', 'ASC']];
+        break;
+      case 'highest':
+        order = [['rating', 'DESC']];
+        break;
+      case 'lowest':
+        order = [['rating', 'ASC']];
+        break;
+      case 'newest':
+      default:
+        order = [['createdAt', 'DESC']];
+    }
+
+    const reviews = await Review.findAndCountAll({
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'email'],
+        },
+        {
+          model: Product,
+          as: 'product',
+          attributes: ['id', 'name', 'slug'],
+        },
+      ],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order,
+    });
+
+    return ApiResponse.success(
+      res,
+      'Reviews retrieved successfully',
+      {
+        reviews: reviews.rows,
+        pagination: {
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          total: reviews.count,
+        },
+      },
+      HTTP_STATUS_CODES.OK,
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Remove approval method and just keep delete
+export const adminDeleteReview = async (req, res, next) => {
+  try {
+    const { reviewId } = req.params;
+
+    const review = await Review.findByPk(reviewId);
+    if (!review) {
+      return ApiResponse.error(res, 'Review not found', HTTP_STATUS_CODES.NOT_FOUND);
+    }
+
+    await review.destroy();
+
+    return ApiResponse.success(res, 'Review deleted successfully', null, HTTP_STATUS_CODES.OK);
+  } catch (error) {
+    next(error);
+  }
+};
