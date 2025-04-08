@@ -6,8 +6,7 @@ import {
   getUserProductReview,
   deleteReview,
   adminGetAllReviews,
-  adminApproveReview,
-  adminRejectReview,
+  adminDeleteReview,
 } from '../controllers/reviewController.js';
 import { isAuthenticated } from '../middlewares/auth.js';
 import { isAdmin } from '../middlewares/admin.js';
@@ -21,9 +20,8 @@ router.get('/products/:productId/review-stats', getProductReviewStats);
 router.get('/products/:productId/my-review', isAuthenticated, getUserProductReview);
 router.delete('/reviews/:reviewId', isAuthenticated, deleteReview);
 
-// Admin routes
+// Admin routes - simplified
 router.get('/admin/reviews', isAuthenticated, isAdmin, adminGetAllReviews);
-router.patch('/admin/reviews/:reviewId/approve', isAuthenticated, isAdmin, adminApproveReview);
-router.delete('/admin/reviews/:reviewId', isAuthenticated, isAdmin, adminRejectReview);
+router.delete('/admin/reviews/:reviewId', isAuthenticated, isAdmin, adminDeleteReview);
 
 export default router;
