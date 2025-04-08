@@ -55,6 +55,16 @@ Review.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
 Order.hasMany(OrderItem, { foreignKey: 'orderId', as: 'items' });
 OrderItem.belongsTo(Order, { foreignKey: 'orderId' });
 
+//Order and Product Image Relaitonships
+OrderItem.belongsTo(ProductImage, {
+  foreignKey: 'productId',
+  targetKey: 'productId',
+  as: 'productImage',
+  scope: {
+    isDefault: true,
+  },
+});
+
 // Product and OrderItem relationships
 Product.hasMany(OrderItem, { foreignKey: 'productId' });
 OrderItem.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
