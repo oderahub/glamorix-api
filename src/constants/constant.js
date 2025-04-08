@@ -234,7 +234,7 @@ export const VALIDATION = {
   PASSWORD_MIN_LENGTH: 8,
   PASSWORD_REGEX: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
   EMAIL_REGEX: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-  PHONE_REGEX: /^(0\d{10})$/,
+  PHONE_REGEX: /^(\+\d{1,3})?[\s.-]?\(?\d{1,4}\)?[\s.-]?\d{1,5}[\s.-]?\d{1,9}$/,
   USERNAME_REGEX: /^[a-zA-Z0-9._-]{3,20}$/,
   MAX_CART_ITEMS: 50,
   MAX_WISHLIST_ITEMS: 100,
