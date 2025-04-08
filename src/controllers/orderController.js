@@ -10,6 +10,30 @@ import {
 } from '../constants/constant.js';
 
 // Helper function to transform order images
+// const transformOrderImages = (req, order) => {
+//   if (!order || !order.items) return order;
+
+//   const baseUrl = `${req.protocol}://${req.get('host')}`;
+//   const transformedOrder = { ...order.toJSON() };
+
+//   transformedOrder.items = transformedOrder.items.map((item) => {
+//     // Add image URL to the product snapshot if imageId is available
+//     if (item.productSnapshot && item.productSnapshot.imageId && item.productImage) {
+//       item.productSnapshot.imageUrl = `${baseUrl}/api/products/images/${item.productSnapshot.imageId}`;
+//     }
+
+//     // Clean up by removing base64 data if present
+//     if (item.productImage) {
+//       delete item.productImage.imageData;
+//     }
+
+//     return item;
+//   });
+
+//   return transformedOrder;
+// };
+
+// Helper function to transform order images
 const transformOrderImages = (req, order) => {
   if (!order || !order.items) return order;
 
@@ -18,12 +42,15 @@ const transformOrderImages = (req, order) => {
 
   transformedOrder.items = transformedOrder.items.map((item) => {
     // Add image URL to the product snapshot if imageId is available
-    if (item.productSnapshot && item.productSnapshot.imageId && item.productImage) {
+    if (item.productSnapshot && item.productSnapshot.imageId) {
       item.productSnapshot.imageUrl = `${baseUrl}/api/products/images/${item.productSnapshot.imageId}`;
     }
 
-    // Clean up by removing base64 data if present
+    // If the item has a productImage relation, use that for the URL
     if (item.productImage) {
+      item.imageUrl = `${baseUrl}/api/products/images/${item.productImage.id}`;
+
+      // Clean up by removing base64 data if present
       delete item.productImage.imageData;
     }
 
@@ -290,6 +317,42 @@ export const placeOrder = async (req, res, next) => {
 // };
 
 // Updated getOrderDetails to include product images
+// export const getOrderDetails = async (req, res, next) => {
+//   try {
+//     const order = await Order.findOne({
+//       where: { id: req.params.orderId, userId: req.user.id },
+//       include: [
+//         {
+//           model: OrderItem,
+//           as: 'items',
+//           include: [
+//             {
+//               model: ProductImage,
+//               as: 'productImage',
+//               attributes: ['id', 'isDefault', 'mimeType'],
+//               where: { isDefault: true },
+//               required: false,
+//               limit: 1,
+//             },
+//           ],
+//         },
+//       ],
+//     });
+
+//     if (!order) {
+//       return ApiResponse.error(res, ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
+//     }
+
+//     // Transform the order to include image URLs
+//     const transformedOrder = transformOrderImages(req, order);
+
+//     return ApiResponse.success(res, 'Order details retrieved', transformedOrder);
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+// Updated getOrderDetails to include product images
 export const getOrderDetails = async (req, res, next) => {
   try {
     const order = await Order.findOne({
@@ -305,7 +368,7 @@ export const getOrderDetails = async (req, res, next) => {
               attributes: ['id', 'isDefault', 'mimeType'],
               where: { isDefault: true },
               required: false,
-              limit: 1,
+              // Remove the limit parameter since it's not supported for belongsTo
             },
           ],
         },
@@ -429,40 +492,6 @@ export const cancelOrder = async (req, res, next) => {
   }
 };
 
-// export const getCustomerOrders = async (req, res, next) => {
-//   try {
-//     const { limit = 10, offset = 0, status, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
-
-//     // Build the query conditions
-//     const where = { userId: req.user.id };
-//     if (status) {
-//       where.status = status;
-//     }
-
-//     // Fetch orders with pagination, filtering, and sorting
-//     const orders = await Order.findAndCountAll({
-//       where,
-//       limit: parseInt(limit),
-//       offset: parseInt(offset),
-//       order: [[sortBy, sortOrder]],
-//       include: [{ model: OrderItem, as: 'items' }],
-//     });
-
-//     if (!orders.rows.length) {
-//       return ApiResponse.error(res, ERROR_MESSAGES.NO_ORDERS_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
-//     }
-
-//     return ApiResponse.success(res, 'Orders retrieved successfully', {
-//       total: orders.count,
-//       orders: orders.rows,
-//       limit: parseInt(limit),
-//       offset: parseInt(offset),
-//     });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
-
 // Updated getCustomerOrders to include product images
 export const getCustomerOrders = async (req, res, next) => {
   try {
@@ -491,7 +520,6 @@ export const getCustomerOrders = async (req, res, next) => {
               attributes: ['id', 'isDefault', 'mimeType'],
               where: { isDefault: true },
               required: false,
-              limit: 1,
             },
           ],
         },
