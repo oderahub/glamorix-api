@@ -5,11 +5,32 @@ import { Op } from 'sequelize';
 import sequelize from '../config/database.js';
 
 // Helper function to check if user has purchased a product
+// const hasUserPurchasedProduct = async (userId, productId) => {
+//   const orders = await Order.findAll({
+//     where: {
+//       userId,
+//       status: { [Op.in]: ['delivered', 'completed'] }, // Only consider completed orders
+//     },
+//     include: [
+//       {
+//         model: OrderItem,
+//         as: 'items',
+//         where: { productId },
+//         required: true,
+//       },
+//     ],
+//   });
+
+//   return orders.length > 0;
+// };
 const hasUserPurchasedProduct = async (userId, productId) => {
+  // Update to use your actual order statuses for completed orders
+  const completedStatuses = [ORDER_STATUS.DELIVERED, ORDER_STATUS.ACCEPTED];
+
   const orders = await Order.findAll({
     where: {
       userId,
-      status: { [Op.in]: ['delivered', 'completed'] }, // Only consider completed orders
+      status: { [Op.in]: completedStatuses }, // Only consider completed orders
     },
     include: [
       {
@@ -24,7 +45,6 @@ const hasUserPurchasedProduct = async (userId, productId) => {
   return orders.length > 0;
 };
 
-// Add or update a review - no approval required
 export const addReview = async (req, res, next) => {
   try {
     const { productId, rating, title, comment } = req.body;
@@ -75,6 +95,7 @@ export const addReview = async (req, res, next) => {
         title,
         comment,
         isVerifiedPurchase: true,
+        isApproved: true, // Auto-approve
       });
 
       return ApiResponse.success(
@@ -88,6 +109,70 @@ export const addReview = async (req, res, next) => {
     next(error);
   }
 };
+// Add or update a review - no approval required
+// export const addReview = async (req, res, next) => {
+//   try {
+//     const { productId, rating, title, comment } = req.body;
+//     const userId = req.user.id;
+
+//     // Validate product exists
+//     const product = await Product.findByPk(productId);
+//     if (!product) {
+//       return ApiResponse.error(res, ERROR_MESSAGES.PRODUCT_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
+//     }
+
+//     // Check if user has purchased the product
+//     const hasPurchased = await hasUserPurchasedProduct(userId, productId);
+//     if (!hasPurchased) {
+//       return ApiResponse.error(
+//         res,
+//         'You can only review products you have purchased',
+//         HTTP_STATUS_CODES.FORBIDDEN,
+//       );
+//     }
+
+//     // Check if user has already reviewed this product
+//     let existingReview = await Review.findOne({
+//       where: { userId, productId },
+//     });
+
+//     if (existingReview) {
+//       // Update existing review
+//       existingReview = await existingReview.update({
+//         rating,
+//         title,
+//         comment,
+//         isVerifiedPurchase: true,
+//       });
+
+//       return ApiResponse.success(
+//         res,
+//         'Review updated successfully',
+//         existingReview,
+//         HTTP_STATUS_CODES.OK,
+//       );
+//     } else {
+//       // Create new review
+//       const newReview = await Review.create({
+//         userId,
+//         productId,
+//         rating,
+//         title,
+//         comment,
+//         isVerifiedPurchase: true,
+//       });
+
+//       return ApiResponse.success(
+//         res,
+//         'Review submitted successfully',
+//         newReview,
+//         HTTP_STATUS_CODES.CREATED,
+//       );
+//     }
+//   } catch (error) {
+//     next(error);
+//   }
+// };
 
 // Get all reviews for a product - no approval filter
 export const getProductReviews = async (req, res, next) => {

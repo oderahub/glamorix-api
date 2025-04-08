@@ -56,6 +56,10 @@ Order.hasMany(OrderItem, { foreignKey: 'orderId', as: 'items' });
 OrderItem.belongsTo(Order, { foreignKey: 'orderId' });
 
 //Order and Product Image Relaitonships
+
+// OrderItem and ProductImage relationship
+// This creates a many-to-one relationship between OrderItem and ProductImage
+// where the join is based on the productId being the same
 OrderItem.belongsTo(ProductImage, {
   foreignKey: 'productId',
   targetKey: 'productId',
