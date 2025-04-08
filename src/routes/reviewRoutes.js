@@ -3,7 +3,6 @@ import { authenticateToken, requireRole } from '../utils/authMiddleware.js';
 import {
   addReview,
   getProductReviews,
-  getProductReviewStats,
   getUserProductReview,
   deleteReview,
   adminGetAllReviews,
@@ -15,7 +14,7 @@ const router = express.Router();
 
 // Public routes (no authentication required)
 router.get('/products/:productId/reviews', getProductReviews);
-router.get('/products/:productId/review-stats', getProductReviewStats);
+// Note: review stats are now handled by the Product model's getReviewStatistics method
 
 // Customer routes (authentication required)
 router.post('/reviews', authenticateToken, addReview);

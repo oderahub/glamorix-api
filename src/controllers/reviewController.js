@@ -1,9 +1,8 @@
-// Updates to reviewController.js to remove approval requirement
-
 import { Review, User, Product, Order, OrderItem } from '../models/index.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { HTTP_STATUS_CODES, ERROR_MESSAGES } from '../constants/constant.js';
 import { Op } from 'sequelize';
+import sequelize from '../config/database.js';
 
 // Helper function to check if user has purchased a product
 const hasUserPurchasedProduct = async (userId, productId) => {
@@ -39,6 +38,13 @@ export const addReview = async (req, res, next) => {
 
     // Check if user has purchased the product
     const hasPurchased = await hasUserPurchasedProduct(userId, productId);
+    if (!hasPurchased) {
+      return ApiResponse.error(
+        res,
+        'You can only review products you have purchased',
+        HTTP_STATUS_CODES.FORBIDDEN,
+      );
+    }
 
     // Check if user has already reviewed this product
     let existingReview = await Review.findOne({
@@ -51,9 +57,7 @@ export const addReview = async (req, res, next) => {
         rating,
         title,
         comment,
-        isVerifiedPurchase: hasPurchased,
-        // All reviews are now automatically approved
-        isApproved: true,
+        isVerifiedPurchase: true,
       });
 
       return ApiResponse.success(
@@ -64,14 +68,6 @@ export const addReview = async (req, res, next) => {
       );
     } else {
       // Create new review
-      if (!hasPurchased) {
-        return ApiResponse.error(
-          res,
-          'You can only review products you have purchased',
-          HTTP_STATUS_CODES.FORBIDDEN,
-        );
-      }
-
       const newReview = await Review.create({
         userId,
         productId,
@@ -79,8 +75,6 @@ export const addReview = async (req, res, next) => {
         title,
         comment,
         isVerifiedPurchase: true,
-        // Auto-approve all reviews
-        isApproved: true,
       });
 
       return ApiResponse.success(
@@ -123,22 +117,12 @@ export const getProductReviews = async (req, res, next) => {
 
     // Get all reviews (no approval filter)
     const reviews = await Review.findAndCountAll({
-      where: {
-        productId,
-        // No isApproved filter
-      },
+      where: { productId },
       include: [
         {
           model: User,
           as: 'user',
           attributes: ['id'],
-          include: [
-            {
-              model: 'Customer',
-              as: 'customerProfile',
-              attributes: ['firstName', 'lastName'],
-            },
-          ],
         },
       ],
       limit: parseInt(limit),
@@ -146,41 +130,8 @@ export const getProductReviews = async (req, res, next) => {
       order,
     });
 
-    // Calculate review statistics
-    const stats = await Review.findAll({
-      where: {
-        productId,
-        // No isApproved filter
-      },
-      attributes: ['rating', [sequelize.fn('COUNT', sequelize.col('rating')), 'count']],
-      group: ['rating'],
-    });
-
-    // Format review statistics
-    const ratingStats = {
-      avgRating: 0,
-      totalReviews: reviews.count,
-      distribution: {
-        1: 0,
-        2: 0,
-        3: 0,
-        4: 0,
-        5: 0,
-      },
-    };
-
-    let totalRatingSum = 0;
-    stats.forEach((stat) => {
-      const rating = stat.rating;
-      const count = parseInt(stat.dataValues.count);
-      ratingStats.distribution[rating] = count;
-      totalRatingSum += rating * count;
-    });
-
-    // Calculate average rating (if there are reviews)
-    if (reviews.count > 0) {
-      ratingStats.avgRating = parseFloat((totalRatingSum / reviews.count).toFixed(1));
-    }
+    // Get review statistics directly from the product model
+    const stats = await product.getReviewStatistics();
 
     return ApiResponse.success(
       res,
@@ -192,7 +143,7 @@ export const getProductReviews = async (req, res, next) => {
           offset: parseInt(offset),
           total: reviews.count,
         },
-        stats: ratingStats,
+        stats,
       },
       HTTP_STATUS_CODES.OK,
     );
@@ -201,9 +152,60 @@ export const getProductReviews = async (req, res, next) => {
   }
 };
 
-// Other methods updated similarly to remove approval filters...
+// Get user's review for a specific product
+export const getUserProductReview = async (req, res, next) => {
+  try {
+    const { productId } = req.params;
+    const userId = req.user.id;
 
-// Admin methods - simplified to just allow deletion
+    const review = await Review.findOne({
+      where: { userId, productId },
+    });
+
+    if (!review) {
+      return ApiResponse.error(
+        res,
+        'You have not reviewed this product yet',
+        HTTP_STATUS_CODES.NOT_FOUND,
+      );
+    }
+
+    return ApiResponse.success(res, 'Review retrieved successfully', review, HTTP_STATUS_CODES.OK);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete a review
+export const deleteReview = async (req, res, next) => {
+  try {
+    const { reviewId } = req.params;
+    const userId = req.user.id;
+
+    const review = await Review.findByPk(reviewId);
+
+    if (!review) {
+      return ApiResponse.error(res, 'Review not found', HTTP_STATUS_CODES.NOT_FOUND);
+    }
+
+    // Check if the review belongs to the user
+    if (review.userId !== userId) {
+      return ApiResponse.error(
+        res,
+        'You can only delete your own reviews',
+        HTTP_STATUS_CODES.FORBIDDEN,
+      );
+    }
+
+    await review.destroy();
+
+    return ApiResponse.success(res, 'Review deleted successfully', null, HTTP_STATUS_CODES.OK);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Admin controllers
 export const adminGetAllReviews = async (req, res, next) => {
   try {
     const { limit = 10, offset = 0, sort = 'newest' } = req.query;
@@ -261,7 +263,7 @@ export const adminGetAllReviews = async (req, res, next) => {
   }
 };
 
-// Remove approval method and just keep delete
+// Admin delete review
 export const adminDeleteReview = async (req, res, next) => {
   try {
     const { reviewId } = req.params;
