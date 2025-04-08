@@ -92,18 +92,97 @@ export const placeOrder = async (req, res, next) => {
     );
 
     // Create order items and update stock
+    //     const orderItems = await Promise.all(
+    //       items.map(async (item) => {
+    //         const product = await Product.findByPk(item.productId, { transaction: t });
+    //         const variant = item.variantId
+    //           ? await ProductVariant.findByPk(item.variantId, { transaction: t })
+    //           : null;
+    //         const unitPrice = variant ? variant.price || product.price : product.price;
+    //         const itemSubtotal = unitPrice * item.quantity;
+    //         const snapshot = {
+    //           name: product.name,
+    //           price: unitPrice,
+    //           variant: variant ? { size: variant.size, color: variant.color } : null,
+    //         };
+
+    //         if (variant) {
+    //           await ProductVariant.update(
+    //             { stockQuantity: variant.stockQuantity - item.quantity },
+    //             { where: { id: variant.id }, transaction: t },
+    //           );
+    //         } else {
+    //           await Product.update(
+    //             { stockQuantity: product.stockQuantity - item.quantity },
+    //             { where: { id: product.id }, transaction: t },
+    //           );
+    //         }
+
+    //         return {
+    //           orderId: order.id,
+    //           productId: item.productId,
+    //           variantId: item.variantId,
+    //           quantity: item.quantity,
+    //           unitPrice,
+    //           subtotal: itemSubtotal,
+    //           discount: 0.0,
+    //           productSnapshot: snapshot,
+    //         };
+    //       }),
+    //     );
+
+    //     await OrderItem.bulkCreate(orderItems, { transaction: t });
+
+    //     await t.commit();
+    //     t = null;
+
+    //     const createdOrder = await Order.findByPk(order.id, {
+    //       include: [{ model: OrderItem, as: 'items' }],
+    //     });
+
+    //     return ApiResponse.success(
+    //       res,
+    //       'Order placed successfully',
+    //       createdOrder,
+    //       HTTP_STATUS_CODES.CREATED,
+    //     );
+    //   } catch (error) {
+    //     // Only roll back if transaction exists and hasn't been committed
+    //     if (t) await t.rollback();
+    //     next(error);
+    //   }
+
+    // Create order items and update stock
     const orderItems = await Promise.all(
       items.map(async (item) => {
-        const product = await Product.findByPk(item.productId, { transaction: t });
+        const product = await Product.findByPk(item.productId, {
+          transaction: t,
+          include: [
+            {
+              model: ProductImage,
+              as: 'images',
+              where: { isDefault: true },
+              required: false,
+              limit: 1,
+            },
+          ],
+        });
+
         const variant = item.variantId
           ? await ProductVariant.findByPk(item.variantId, { transaction: t })
           : null;
+
         const unitPrice = variant ? variant.price || product.price : product.price;
         const itemSubtotal = unitPrice * item.quantity;
+
+        // Include image information in the product snapshot
+        const defaultImage = product.images && product.images.length > 0 ? product.images[0] : null;
+
         const snapshot = {
           name: product.name,
           price: unitPrice,
           variant: variant ? { size: variant.size, color: variant.color } : null,
+          imageId: defaultImage ? defaultImage.id : null,
         };
 
         if (variant) {
@@ -137,13 +216,31 @@ export const placeOrder = async (req, res, next) => {
     t = null;
 
     const createdOrder = await Order.findByPk(order.id, {
-      include: [{ model: OrderItem, as: 'items' }],
+      include: [
+        {
+          model: OrderItem,
+          as: 'items',
+          include: [
+            {
+              model: ProductImage,
+              as: 'productImage',
+              attributes: ['id', 'isDefault', 'mimeType'],
+              where: { isDefault: true },
+              required: false,
+              limit: 1,
+            },
+          ],
+        },
+      ],
     });
+
+    // Transform the order to include image URLs
+    const transformedOrder = transformOrderImages(req, createdOrder);
 
     return ApiResponse.success(
       res,
       'Order placed successfully',
-      createdOrder,
+      transformedOrder,
       HTTP_STATUS_CODES.CREATED,
     );
   } catch (error) {
@@ -153,16 +250,52 @@ export const placeOrder = async (req, res, next) => {
   }
 };
 
+// export const getOrderDetails = async (req, res, next) => {
+//   try {
+//     const order = await Order.findOne({
+//       where: { id: req.params.orderId, userId: req.user.id },
+//       include: [{ model: OrderItem, as: 'items' }],
+//     });
+//     if (!order) {
+//       return ApiResponse.error(res, ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
+//     }
+//     return ApiResponse.success(res, 'Order details retrieved', order);
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+// Updated getOrderDetails to include product images
 export const getOrderDetails = async (req, res, next) => {
   try {
     const order = await Order.findOne({
       where: { id: req.params.orderId, userId: req.user.id },
-      include: [{ model: OrderItem, as: 'items' }],
+      include: [
+        {
+          model: OrderItem,
+          as: 'items',
+          include: [
+            {
+              model: ProductImage,
+              as: 'productImage',
+              attributes: ['id', 'isDefault', 'mimeType'],
+              where: { isDefault: true },
+              required: false,
+              limit: 1,
+            },
+          ],
+        },
+      ],
     });
+
     if (!order) {
       return ApiResponse.error(res, ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
     }
-    return ApiResponse.success(res, 'Order details retrieved', order);
+
+    // Transform the order to include image URLs
+    const transformedOrder = transformOrderImages(req, order);
+
+    return ApiResponse.success(res, 'Order details retrieved', transformedOrder);
   } catch (error) {
     next(error);
   }
@@ -272,6 +405,41 @@ export const cancelOrder = async (req, res, next) => {
   }
 };
 
+// export const getCustomerOrders = async (req, res, next) => {
+//   try {
+//     const { limit = 10, offset = 0, status, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
+
+//     // Build the query conditions
+//     const where = { userId: req.user.id };
+//     if (status) {
+//       where.status = status;
+//     }
+
+//     // Fetch orders with pagination, filtering, and sorting
+//     const orders = await Order.findAndCountAll({
+//       where,
+//       limit: parseInt(limit),
+//       offset: parseInt(offset),
+//       order: [[sortBy, sortOrder]],
+//       include: [{ model: OrderItem, as: 'items' }],
+//     });
+
+//     if (!orders.rows.length) {
+//       return ApiResponse.error(res, ERROR_MESSAGES.NO_ORDERS_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
+//     }
+
+//     return ApiResponse.success(res, 'Orders retrieved successfully', {
+//       total: orders.count,
+//       orders: orders.rows,
+//       limit: parseInt(limit),
+//       offset: parseInt(offset),
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+// Updated getCustomerOrders to include product images
 export const getCustomerOrders = async (req, res, next) => {
   try {
     const { limit = 10, offset = 0, status, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
@@ -288,16 +456,34 @@ export const getCustomerOrders = async (req, res, next) => {
       limit: parseInt(limit),
       offset: parseInt(offset),
       order: [[sortBy, sortOrder]],
-      include: [{ model: OrderItem, as: 'items' }],
+      include: [
+        {
+          model: OrderItem,
+          as: 'items',
+          include: [
+            {
+              model: ProductImage,
+              as: 'productImage',
+              attributes: ['id', 'isDefault', 'mimeType'],
+              where: { isDefault: true },
+              required: false,
+              limit: 1,
+            },
+          ],
+        },
+      ],
     });
 
     if (!orders.rows.length) {
       return ApiResponse.error(res, ERROR_MESSAGES.NO_ORDERS_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
     }
 
+    // Transform each order to include image URLs
+    const transformedOrders = orders.rows.map((order) => transformOrderImages(req, order));
+
     return ApiResponse.success(res, 'Orders retrieved successfully', {
       total: orders.count,
-      orders: orders.rows,
+      orders: transformedOrders,
       limit: parseInt(limit),
       offset: parseInt(offset),
     });
