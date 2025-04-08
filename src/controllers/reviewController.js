@@ -1,6 +1,6 @@
 import { Review, User, Product, Order, OrderItem } from '../models/index.js';
 import ApiResponse from '../utils/ApiResponse.js';
-import { HTTP_STATUS_CODES, ERROR_MESSAGES } from '../constants/constant.js';
+import { HTTP_STATUS_CODES, ERROR_MESSAGES, ORDER_STATUS } from '../constants/constant.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/database.js';
 
@@ -22,15 +22,37 @@ import sequelize from '../config/database.js';
 //   });
 
 //   return orders.length > 0;
+// // };
+// const hasUserPurchasedProduct = async (userId, productId) => {
+//   // Update to use your actual order statuses for completed orders
+//   const completedStatuses = [ORDER_STATUS.DELIVERED, ORDER_STATUS.ACCEPTED];
+
+//   const orders = await Order.findAll({
+//     where: {
+//       userId,
+//       status: { [Op.in]: completedStatuses }, // Only consider completed orders
+//     },
+//     include: [
+//       {
+//         model: OrderItem,
+//         as: 'items',
+//         where: { productId },
+//         required: true,
+//       },
+//     ],
+//   });
+
+//   return orders.length > 0;
 // };
+
 const hasUserPurchasedProduct = async (userId, productId) => {
-  // Update to use your actual order statuses for completed orders
+  // Use multiple valid statuses that indicate the user has received the product
   const completedStatuses = [ORDER_STATUS.DELIVERED, ORDER_STATUS.ACCEPTED];
 
   const orders = await Order.findAll({
     where: {
       userId,
-      status: { [Op.in]: completedStatuses }, // Only consider completed orders
+      status: { [Op.in]: completedStatuses },
     },
     include: [
       {

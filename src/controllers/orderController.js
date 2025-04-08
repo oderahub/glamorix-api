@@ -1,5 +1,5 @@
 import sequelize from '../config/database.js';
-import { Order, OrderItem, Product, ProductVariant, User } from '../models/index.js';
+import { Order, OrderItem, Product, ProductVariant, User, ProductImage } from '../models/index.js';
 // import transformOrderImages from '../utils/transformOrderImages.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import {
