@@ -877,7 +877,99 @@ components:
                       type: string
                     surname:
                       type: string
-
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        userId:
+          type: string
+          format: uuid
+          example: "7c0d7bb0-ae1a-4b7f-8d7f-5e3db1895e19"
+        productId:
+          type: string
+          format: uuid
+          example: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          example: 4
+        title:
+          type: string
+          example: "Great product!"
+        comment:
+          type: string
+          example: "I really enjoyed using this product. It exceeded my expectations."
+        isVerifiedPurchase:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: "2023-11-15T08:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2023-11-15T08:30:00Z"
+    ReviewCreateSchema:
+      type: object
+      properties:
+        productId:
+          type: string
+          format: uuid
+          description: The ID of the product to review
+          example: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Rating from 1 to 5 stars
+          example: 4
+        title:
+          type: string
+          description: Review title or headline
+          example: "Great product!"
+        comment:
+          type: string
+          description: Detailed review text
+          example: "I really enjoyed using this product. It exceeded my expectations."
+      required:
+        - productId
+        - rating
+    ReviewStatistics:
+      type: object
+      properties:
+        avgRating:
+          type: number
+          format: float
+          example: 4.5
+          description: Average rating of the product
+        totalReviews:
+          type: integer
+          example: 24
+          description: Total number of reviews
+        distribution:
+          type: object
+          properties:
+            "1":
+              type: integer
+              example: 1
+            "2":
+              type: integer
+              example: 2
+            "3":
+              type: integer
+              example: 3
+            "4":
+              type: integer
+              example: 8
+            "5":
+              type: integer
+              example: 10
+          description: Distribution of ratings by star count
 paths:
   /auth/register:
     post:
@@ -1671,7 +1763,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
   /categories/subsubcategory/{subSubcategoryId}:
     get:
       summary: Get subsubcategory details
@@ -1702,8 +1793,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-                
+                $ref: '#/components/schemas/Error'             
   /admin/categories/{id}:
     patch:
       summary: Update a category
@@ -3369,8 +3459,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  
-  
   /payments/status/{orderId}:
     get:
       summary: Get payment status for an order
@@ -3402,8 +3490,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-                
-  
   /wishlist:
     post:
       summary: Add product to wishlist
@@ -3672,8 +3758,345 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  
-  
-  
-  
-  
+  /reviews:
+    post:
+      summary: Add or update a product review
+      description: Allows authenticated users to create or update their review for a product they have purchased
+      tags:
+        - Reviews
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreateSchema'
+      responses:
+        '201':
+          description: Review created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Review'
+        '200':
+          description: Review updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Review'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - User has not purchased this product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /products/{productId}/reviews:
+    get:
+      summary: Get all reviews for a product
+      tags:
+        - Reviews
+        - Products
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the product to get reviews for
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: ['newest', 'highest', 'lowest']
+            default: 'newest'
+      responses:
+        '200':
+          description: Reviews retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          reviews:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Review'
+                          pagination:
+                            type: object
+                            properties:
+                              limit:
+                                type: integer
+                              offset:
+                                type: integer
+                              total:
+                                type: integer
+                          stats:
+                            $ref: '#/components/schemas/ReviewStatistics'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /products/{productId}/review-stats:
+    get:
+      summary: Get review statistics for a product
+      tags:
+        - Reviews
+        - Products
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the product to get review statistics for
+      responses:
+        '200':
+          description: Review statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ReviewStatistics'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /products/{productId}/my-review:
+    get:
+      summary: Get the authenticated user's review for a product
+      tags:
+        - Reviews
+        - Products
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the product to get the user's review for
+      responses:
+        '200':
+          description: Review retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Review'
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Review not found - User has not reviewed this product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /reviews/{reviewId}:
+    delete:
+      summary: Delete a review
+      tags:
+        - Reviews
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the review to delete
+      responses:
+        '200':
+          description: Review deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - User can only delete their own reviews
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Review not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/reviews:
+    get:
+      summary: Get all reviews (admin only)
+      tags:
+        - Admin
+        - Reviews
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: ['newest', 'oldest', 'highest', 'lowest']
+            default: 'newest'
+      responses:
+        '200':
+          description: Reviews retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          reviews:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Review'
+                          pagination:
+                            type: object
+                            properties:
+                              limit:
+                                type: integer
+                              offset:
+                                type: integer
+                              total:
+                                type: integer
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/reviews/{reviewId}:
+    delete:
+      summary: Delete a review (admin only)
+      tags:
+        - Admin
+        - Reviews
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the review to delete
+      responses:
+        '200':
+          description: Review deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Review not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'                
+

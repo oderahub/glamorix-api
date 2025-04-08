@@ -11,6 +11,7 @@ import productRoute from './routes/productRoutes.js';
 import addressRoutes from './routes/addressRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import wishlistRoutes from './routes/wishlistRoutes.js';
+import reviewRoutes from './routes/reviewRoutes.js';
 
 import { errorHandler } from './middlewares/error-handler.js';
 import swaggerUi from 'swagger-ui-express';
@@ -76,6 +77,7 @@ app.use('/api', productRoute);
 app.use('/api/addresses', addressRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/wishlist', wishlistRoutes);
+app.use('/api', reviewRoutes);
 
 const swaggerDocument = YAML.parse(fs.readFileSync('./docs/openapi.yaml', 'utf8'));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
