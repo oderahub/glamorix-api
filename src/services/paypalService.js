@@ -90,7 +90,7 @@ export async function createPayPalOrder(orderData) {
       return {
         name: item.name || `Product ID: ${item.productId}`,
         unit_amount: {
-          currency_code: 'USD',
+          currency_code: 'GBP',
           value: itemUnitPrice,
         },
         quantity: item.quantity.toString(),
@@ -107,23 +107,23 @@ export async function createPayPalOrder(orderData) {
           description: `Order #${orderData.orderNumber}`,
           custom_id: orderData.id,
           amount: {
-            currency_code: 'USD',
+            currency_code: 'GBP',
             value: totalAmount,
             breakdown: {
               item_total: {
-                currency_code: 'USD',
+                currency_code: 'GBP',
                 value: subtotal,
               },
               shipping: {
-                currency_code: 'USD',
+                currency_code: 'GBP',
                 value: deliveryFee,
               },
               tax_total: {
-                currency_code: 'USD',
+                currency_code: 'GBP',
                 value: tax,
               },
               discount: {
-                currency_code: 'USD',
+                currency_code: 'GBP',
                 value: discount,
               },
             },
@@ -269,7 +269,7 @@ export async function refundPayPalPayment(captureId, amount) {
 
     const payload = {
       amount: {
-        currency_code: 'USD',
+        currency_code: 'GBP',
         value: amount.toFixed(2),
       },
     };
