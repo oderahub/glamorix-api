@@ -69,6 +69,14 @@ export const forgotPasswordSchema = Joi.object({
   }),
 });
 
+// Resend OTP Schema
+export const resendOtpSchema = Joi.object({
+  userId: Joi.string().required().messages({
+    'any.required': ERROR_MESSAGES.VALIDATION_ERROR,
+    'string.empty': ERROR_MESSAGES.VALIDATION_ERROR,
+  }),
+});
+
 // Reset Password Schema
 export const resetPasswordSchema = Joi.object({
   userId: Joi.string().required().messages({ 'any.required': ERROR_MESSAGES.VALIDATION_ERROR }),
