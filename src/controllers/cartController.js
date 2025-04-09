@@ -200,151 +200,6 @@ export const getCart = async (req, res, next) => {
   }
 };
 
-// export const addToCart = async (req, res, next) => {
-//   const { productId, variantId, quantity } = req.body;
-//   let t;
-//   try {
-//     t = await sequelize.transaction();
-
-//     if (!variantId) {
-//       throw new Error('variantId is required');
-//     }
-//     if (quantity <= 0) {
-//       throw new Error('Quantity must be positive');
-//     }
-
-//     let cart;
-//     if (req.user && req.user.id) {
-//       console.log('AddToCart - Authenticated user:', req.user.id);
-//       cart = await Cart.findOne({
-//         where: { userId: req.user.id, status: CART_STATUS.ACTIVE },
-//         order: [['createdAt', 'ASC']],
-//         transaction: t,
-//       });
-//       if (!cart) {
-//         cart = await Cart.create(
-//           {
-//             userId: req.user.id,
-//             sessionId: null,
-//             status: CART_STATUS.ACTIVE,
-//             expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-//           },
-//           { transaction: t },
-//         );
-//       }
-//     } else {
-//       console.log('AddToCart - Guest user detected');
-//       const sessionId = req.session?.id || 'guest-session';
-//       console.log('AddToCart - Session ID:', sessionId);
-//       cart = await Cart.findOne({
-//         where: { sessionId, status: CART_STATUS.ACTIVE },
-//         order: [['createdAt', 'ASC']],
-//         transaction: t,
-//       });
-//       if (!cart) {
-//         cart = await Cart.create(
-//           {
-//             userId: null,
-//             sessionId,
-//             status: CART_STATUS.ACTIVE,
-//             expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-//           },
-//           { transaction: t },
-//         );
-//       }
-//     }
-
-//     console.log('AddToCart - Cart ID:', cart.id);
-
-//     const product = await Product.findByPk(productId, { transaction: t });
-//     if (!product) {
-//       throw new Error(ERROR_MESSAGES.PRODUCT_NOT_FOUND);
-//     }
-
-//     const productVariant = await ProductVariant.findByPk(variantId, { transaction: t });
-//     if (!productVariant || productVariant.productId !== productId) {
-//       throw new Error('Invalid product variant');
-//     }
-//     if (productVariant.stockQuantity < quantity) {
-//       throw new Error('Insufficient stock for variant');
-//     }
-
-//     const unitPrice = parseFloat(productVariant.price || product.price);
-//     if (isNaN(unitPrice) || unitPrice <= 0) {
-//       throw new Error(`Invalid price for product: ${productVariant.price || product.price}`);
-//     }
-
-//     const existingItem = await CartItem.findOne({
-//       where: { cartId: cart.id, productId, variantId },
-//       transaction: t,
-//     });
-
-//     if (existingItem) {
-//       existingItem.quantity += quantity;
-//       await existingItem.update({ quantity: existingItem.quantity, unitPrice }, { transaction: t });
-//     } else {
-//       await CartItem.create(
-//         {
-//           cartId: cart.id,
-//           productId,
-//           variantId,
-//           quantity,
-//           unitPrice,
-//           addedAt: new Date(),
-//         },
-//         { transaction: t },
-//       );
-//     }
-
-//     await t.commit();
-//     console.log('Transaction committed, cartId:', cart.id);
-
-//     const cartItems = await getCartItems(cart.id);
-//     if (!cartItems.length) {
-//       console.warn('No items found after adding to cart:', cart.id);
-//     }
-
-//     const subtotal = cartItems.reduce(
-//       (sum, item) => sum + parseFloat(item.unitPrice) * item.quantity,
-//       0,
-//     );
-//     const discount = 0; // No coupon system
-//     const shipping = 0; // No shipping method at this stage
-//     const tax = 0; // No tax info at this stage
-//     const grandTotal = subtotal - discount + shipping + tax;
-
-//     return ApiResponse.success(res, 'Item added to cart', {
-//       cartItems: cartItems.map((item) => ({
-//         id: item.id,
-//         cartId: item.cartId,
-//         productId: item.productId,
-//         variantId: item.variantId,
-//         quantity: item.quantity,
-//         unitPrice: parseFloat(item.unitPrice),
-//         addedAt: item.addedAt,
-//         createdAt: item.createdAt,
-//         updatedAt: item.updatedAt,
-//         product: item.product,
-//       })),
-//       summary: {
-//         subtotal: parseFloat(subtotal.toFixed(2)),
-//         discount: parseFloat(discount.toFixed(2)),
-//         shipping: parseFloat(shipping.toFixed(2)),
-//         tax: parseFloat(tax.toFixed(2)),
-//         grandTotal: parseFloat(grandTotal.toFixed(2)),
-//         itemCount: cartItems.length,
-//       },
-//     });
-//   } catch (error) {
-//     if (t && !t.finished) {
-//       await t.rollback();
-//       console.error('Transaction rolled back:', error.message);
-//     }
-//     console.error('Error in addToCart:', error.message, error.stack);
-//     next(error);
-//   }
-// };
-
 export const addToCart = async (req, res, next) => {
   const { productId, variantId, quantity } = req.body;
   let t;
@@ -598,7 +453,7 @@ export const checkout = async (req, res, next) => {
     postCode,
     country,
     paymentMethod: rawPaymentMethod,
-    shippingMethod, // Optional, defaults to 0 cost if not provided
+    shippingMethod, // Optional, defaults to STANDARD if not provided
     taxRate, // Optional, defaults to 0 if not provided
   } = req.body;
 
@@ -672,66 +527,81 @@ export const checkout = async (req, res, next) => {
 
     console.log('Checkout - Cart found:', cart.id);
 
-    const items = await CartItem.findAll({ where: { cartId: cart.id }, transaction: t });
+    const items = await CartItem.findAll({
+      where: { cartId: cart.id },
+      include: [
+        {
+          model: Product,
+          as: 'product',
+          attributes: ['id', 'name', 'price', 'featuredImage'],
+        },
+        {
+          model: ProductVariant,
+          as: 'variant',
+          attributes: ['id', 'size', 'color', 'price'],
+        },
+      ],
+      transaction: t,
+    });
+
     if (!items.length) throw new Error(ERROR_MESSAGES.CART_EMPTY);
 
     console.log('Checkout - Cart items:', items.length);
 
-    const productIds = items.map((item) => item.productId);
-    const variantIds = items.map((item) => item.variantId).filter(Boolean);
-    const [products, variants] = await Promise.all([
-      Product.findAll({ where: { id: productIds }, transaction: t }),
-      ProductVariant.findAll({ where: { id: variantIds }, transaction: t }),
-    ]);
-
-    const productMap = new Map(products.map((product) => [product.id, product]));
-    const variantMap = new Map(variants.map((variant) => [variant.id, variant]));
-
+    // Calculate all financial aspects of the order
     let subtotal = 0;
     const orderItemsDetails = [];
+
     for (const item of items) {
-      const product = productMap.get(item.productId);
-      const variant = item.variantId ? variantMap.get(item.variantId) : null;
-      if (!product || product.stockQuantity < item.quantity)
-        throw new Error(ERROR_MESSAGES.PRODUCT_INSUFFICIENT_STOCK);
+      const product = item.product;
+      const variant = item.variant;
 
-      console.log(
-        `Product ID: ${item.productId}, Product Price: ${product.price}, Variant Price: ${variant?.price}`,
-      );
-
-      const unitPriceRaw = variant ? variant.price || product.price : product.price;
-      const unitPrice = parseFloat(unitPriceRaw) || 0;
+      // Determine the correct unit price (variant price or product price)
+      const unitPrice =
+        variant && variant.price ? parseFloat(variant.price) : parseFloat(product.price);
 
       if (isNaN(unitPrice)) {
-        console.error(`Invalid unitPrice for product ID ${item.productId}: ${unitPriceRaw}`);
+        console.error(`Invalid unitPrice for product ID ${item.productId}: ${unitPrice}`);
         throw new Error('Invalid price for product');
       }
 
-      subtotal += unitPrice * item.quantity;
+      const itemTotal = unitPrice * item.quantity;
+      subtotal += itemTotal;
+
       orderItemsDetails.push({
         name: product.name,
         quantity: item.quantity,
         unitPrice: unitPrice.toFixed(2),
-        total: (unitPrice * item.quantity).toFixed(2),
+        total: itemTotal.toFixed(2),
       });
     }
 
-    // Calculate delivery fee based on shippingMethod
+    // Use consistent naming for shipping fees (deliveryFee)
     const deliveryFee =
       shippingMethod && SHIPPING_FEES[shippingMethod] !== undefined
         ? parseFloat(SHIPPING_FEES[shippingMethod])
-        : 0.0;
+        : parseFloat(SHIPPING_FEES[SHIPPING_METHODS.STANDARD] || 0);
 
     // No coupon system, so discount is always 0
     const discount = 0.0;
 
     // Calculate tax based on taxRate
-    const tax = taxRate && taxRate > 0 ? subtotal * (taxRate / 100) : 0.0;
+    const tax = taxRate && taxRate > 0 ? parseFloat((subtotal * (taxRate / 100)).toFixed(2)) : 0.0;
 
-    const totalAmount = subtotal - discount + deliveryFee + tax;
+    // Calculate total with all values as parsed floats to avoid string concatenation issues
+    const totalAmount = parseFloat((subtotal - discount + deliveryFee + tax).toFixed(2));
+
+    console.log('Order Financial Breakdown:', {
+      subtotal,
+      discount,
+      deliveryFee,
+      tax,
+      totalAmount,
+    });
+
     const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
-    // Create the order in the database
+    // Create the order in the database with consistent financial values
     const order = await Order.create(
       {
         userId: req.user?.id || null,
@@ -741,6 +611,7 @@ export const checkout = async (req, res, next) => {
         subtotal,
         tax,
         deliveryFee,
+        shippingCost: deliveryFee, // Set both for backward compatibility
         discount,
         firstName,
         lastName,
@@ -751,18 +622,20 @@ export const checkout = async (req, res, next) => {
         phone,
         paymentMethod,
         paymentStatus: PAYMENT_STATUS.PENDING,
-        shippingMethod: shippingMethod || null,
+        shippingMethod: shippingMethod || SHIPPING_METHODS.STANDARD,
         email: userEmail,
         processedAt: new Date(),
       },
       { transaction: t },
     );
 
+    // Create order items with consistent pricing and detailed snapshots
     const orderItems = items.map((item) => {
-      const product = productMap.get(item.productId);
-      const variant = item.variantId ? variantMap.get(item.variantId) : null;
-      const unitPriceRaw = variant ? variant.price || product.price : product.price;
-      const unitPrice = parseFloat(unitPriceRaw) || 0;
+      const product = item.product;
+      const variant = item.variant;
+      const unitPrice =
+        variant && variant.price ? parseFloat(variant.price) : parseFloat(product.price);
+      const itemTotal = parseFloat((unitPrice * item.quantity).toFixed(2));
 
       return {
         orderId: order.id,
@@ -770,27 +643,44 @@ export const checkout = async (req, res, next) => {
         variantId: item.variantId,
         quantity: item.quantity,
         unitPrice,
-        subtotal: unitPrice * item.quantity,
+        subtotal: itemTotal,
         productSnapshot: {
+          id: product.id,
           name: product.name,
           price: unitPrice,
-          image: product.images && product.images.length > 0 ? product.images[0].url : null,
-          variant: variant ? { size: variant.size, color: variant.color } : null,
+          featuredImage: product.featuredImage,
+          variant: variant
+            ? {
+                id: variant.id,
+                size: variant.size,
+                color: variant.color,
+                price: parseFloat(variant.price),
+              }
+            : null,
         },
       };
     });
 
     await OrderItem.bulkCreate(orderItems, { transaction: t });
 
+    // Update stock quantities
     await Promise.all(
-      items.map(({ productId, variantId, quantity }) =>
-        (variantId ? ProductVariant : Product).update(
-          { stockQuantity: sequelize.literal(`"stockQuantity" - ${quantity}`) },
-          { where: { id: variantId || productId }, transaction: t },
-        ),
-      ),
+      items.map(async (item) => {
+        if (item.variantId) {
+          await ProductVariant.update(
+            { stockQuantity: sequelize.literal(`"stockQuantity" - ${item.quantity}`) },
+            { where: { id: item.variantId }, transaction: t },
+          );
+        } else {
+          await Product.update(
+            { stockQuantity: sequelize.literal(`"stockQuantity" - ${item.quantity}`) },
+            { where: { id: item.productId }, transaction: t },
+          );
+        }
+      }),
     );
 
+    // Mark cart as converted after checkout
     await Cart.update(
       { status: CART_STATUS.CONVERTED },
       { where: { id: cart.id }, transaction: t },
