@@ -1219,6 +1219,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /auth/resend-otp:
+    post:
+      summary: Resend verification OTP
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                  description: The ID of the user to resend the OTP to
+              required:
+                - userId
+      responses:
+        '200':
+          description: OTP resent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid user ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /addresses:
     post:
       summary: Create a new address
