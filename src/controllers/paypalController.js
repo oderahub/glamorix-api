@@ -120,6 +120,15 @@ export const capturePayment = async (req, res, next) => {
       return ApiResponse.error(res, ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
     }
 
+    // Log the order details for debugging purposes
+    console.log('Capture Payment - Order details:', {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      totalAmount: parseFloat(order.totalAmount),
+      paymentStatus: order.paymentStatus,
+      paypalOrderId: order.paypalOrderId,
+    });
+
     // Check if the order has already been paid
     if (order.paymentStatus === PAYMENT_STATUS.PAID) {
       if (transaction) await transaction.rollback();
@@ -135,20 +144,43 @@ export const capturePayment = async (req, res, next) => {
     try {
       // First check the order status with PayPal
       const orderDetails = await getPayPalOrderDetails(paypalOrderId);
+      console.log('PayPal Order Details:', {
+        paypalStatus: orderDetails.status,
+        purchaseUnits: orderDetails.purchase_units.map((unit) => ({
+          amount: unit.amount,
+          paymentStatus: unit.payments?.captures?.[0]?.status,
+        })),
+      });
 
       // If order is already captured, update our records
       if (orderDetails.status === 'COMPLETED') {
         const captureId = orderDetails.purchase_units[0].payments.captures[0].id;
+        const captureAmount = parseFloat(
+          orderDetails.purchase_units[0].payments.captures[0].amount.value,
+        );
 
         await order.update(
           {
             status: ORDER_STATUS.PROCESSING,
             paymentStatus: PAYMENT_STATUS.PAID,
             paypalCaptureId: captureId,
+            paypalPaymentStatus: orderDetails.status,
+            paypalTransactionFee:
+              orderDetails.purchase_units[0].payments.captures[0].seller_receivable_breakdown
+                ?.paypal_fee?.value || null,
             paidAt: new Date(),
           },
           { transaction },
         );
+
+        // Double check the captured amount matches our order total
+        if (Math.abs(captureAmount - parseFloat(order.totalAmount)) > 0.01) {
+          console.warn('Payment amount mismatch:', {
+            orderTotal: parseFloat(order.totalAmount),
+            capturedAmount: captureAmount,
+            difference: captureAmount - parseFloat(order.totalAmount),
+          });
+        }
 
         // Send confirmation email
         await sendOrderConfirmationEmail(order.email, order, order.items);
@@ -166,17 +198,38 @@ export const capturePayment = async (req, res, next) => {
 
       // If not completed, attempt to capture
       const captureData = await capturePayPalPayment(paypalOrderId);
+      console.log('PayPal Capture Data:', {
+        status: captureData.status,
+        captureId: captureData.purchase_units[0].payments.captures[0].id,
+        captureAmount: captureData.purchase_units[0].payments.captures[0].amount.value,
+      });
 
       // Update the order with payment details
       const captureId = captureData.purchase_units[0].payments.captures[0].id;
+      const captureAmount = parseFloat(
+        captureData.purchase_units[0].payments.captures[0].amount.value,
+      );
       const paymentStatus =
         captureData.status === 'COMPLETED' ? PAYMENT_STATUS.PAID : PAYMENT_STATUS.PENDING;
+
+      // Double check the captured amount matches our order total
+      if (Math.abs(captureAmount - parseFloat(order.totalAmount)) > 0.01) {
+        console.warn('Payment amount mismatch:', {
+          orderTotal: parseFloat(order.totalAmount),
+          capturedAmount: captureAmount,
+          difference: captureAmount - parseFloat(order.totalAmount),
+        });
+      }
 
       await order.update(
         {
           status: ORDER_STATUS.PROCESSING,
           paymentStatus,
           paypalCaptureId: captureId,
+          paypalPaymentStatus: captureData.status,
+          paypalTransactionFee:
+            captureData.purchase_units[0].payments.captures[0].seller_receivable_breakdown
+              ?.paypal_fee?.value || null,
           paidAt: new Date(),
         },
         { transaction },
@@ -207,12 +260,28 @@ export const capturePayment = async (req, res, next) => {
           if (orderDetails.status === 'COMPLETED') {
             // The payment was successful, update our records
             const captureId = orderDetails.purchase_units[0].payments.captures[0].id;
+            const captureAmount = parseFloat(
+              orderDetails.purchase_units[0].payments.captures[0].amount.value,
+            );
+
+            // Double check the captured amount matches our order total
+            if (Math.abs(captureAmount - parseFloat(order.totalAmount)) > 0.01) {
+              console.warn('Payment amount mismatch:', {
+                orderTotal: parseFloat(order.totalAmount),
+                capturedAmount: captureAmount,
+                difference: captureAmount - parseFloat(order.totalAmount),
+              });
+            }
 
             await order.update(
               {
                 status: ORDER_STATUS.PROCESSING,
                 paymentStatus: PAYMENT_STATUS.PAID,
                 paypalCaptureId: captureId,
+                paypalPaymentStatus: orderDetails.status,
+                paypalTransactionFee:
+                  orderDetails.purchase_units[0].payments.captures[0].seller_receivable_breakdown
+                    ?.paypal_fee?.value || null,
                 paidAt: new Date(),
               },
               { transaction },
