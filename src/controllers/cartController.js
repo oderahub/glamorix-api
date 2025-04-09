@@ -441,7 +441,6 @@ export const removeFromCart = async (req, res, next) => {
   }
 };
 // UPDATED CHECKOUT FUNCTION WITH PAYPAL PAYMENT INTEGRATION
-
 export const checkout = async (req, res, next) => {
   const {
     firstName,
@@ -527,6 +526,7 @@ export const checkout = async (req, res, next) => {
 
     console.log('Checkout - Cart found:', cart.id);
 
+    // IMPORTANT FIX: Include proper associations when fetching cart items
     const items = await CartItem.findAll({
       where: { cartId: cart.id },
       include: [
@@ -552,13 +552,14 @@ export const checkout = async (req, res, next) => {
     let subtotal = 0;
     const orderItemsDetails = [];
 
+    // IMPORTANT FIX: Properly calculate prices from product and variant
     for (const item of items) {
       const product = item.product;
       const variant = item.variant;
 
       // Determine the correct unit price (variant price or product price)
       const unitPrice =
-        variant && variant.price ? parseFloat(variant.price) : parseFloat(product.price);
+        variant && variant.price !== null ? parseFloat(variant.price) : parseFloat(product.price);
 
       if (isNaN(unitPrice)) {
         console.error(`Invalid unitPrice for product ID ${item.productId}: ${unitPrice}`);
@@ -567,6 +568,10 @@ export const checkout = async (req, res, next) => {
 
       const itemTotal = unitPrice * item.quantity;
       subtotal += itemTotal;
+
+      console.log(
+        `Item: ${product.name}, Quantity: ${item.quantity}, Unit Price: ${unitPrice}, Total: ${itemTotal}`,
+      );
 
       orderItemsDetails.push({
         name: product.name,
@@ -633,8 +638,11 @@ export const checkout = async (req, res, next) => {
     const orderItems = items.map((item) => {
       const product = item.product;
       const variant = item.variant;
+
+      // IMPORTANT FIX: Properly determine the unit price
       const unitPrice =
-        variant && variant.price ? parseFloat(variant.price) : parseFloat(product.price);
+        variant && variant.price !== null ? parseFloat(variant.price) : parseFloat(product.price);
+
       const itemTotal = parseFloat((unitPrice * item.quantity).toFixed(2));
 
       return {
@@ -781,6 +789,346 @@ export const checkout = async (req, res, next) => {
     next(error);
   }
 };
+
+// export const checkout = async (req, res, next) => {
+//   const {
+//     firstName,
+//     lastName,
+//     phone,
+//     email, // For guests
+//     deliveryAddress,
+//     city,
+//     postCode,
+//     country,
+//     paymentMethod: rawPaymentMethod,
+//     shippingMethod, // Optional, defaults to STANDARD if not provided
+//     taxRate, // Optional, defaults to 0 if not provided
+//   } = req.body;
+
+//   const t = await sequelize.transaction();
+//   try {
+//     let cart;
+//     let userEmail;
+
+//     // Debug: Log the user and session information
+//     console.log('Checkout - req.user:', req.user);
+//     console.log('Checkout - req.session:', req.session);
+
+//     // Validate paymentMethod
+//     const validPaymentMethods = Object.values(PAYMENT_METHODS);
+//     const paymentMethod = validPaymentMethods.find(
+//       (method) => method.toLowerCase() === rawPaymentMethod.toLowerCase(),
+//     )
+//       ? rawPaymentMethod.toLowerCase()
+//       : PAYMENT_METHODS.PAYPAL || 'paypal';
+
+//     if (!validPaymentMethods.includes(rawPaymentMethod.toLowerCase())) {
+//       console.warn(
+//         `Invalid payment method "${rawPaymentMethod}" provided. Defaulting to "${PAYMENT_METHODS.PAYPAL || 'paypal'}".`,
+//       );
+//     }
+
+//     // Check if the user is authenticated or a guest
+//     if (req.user && req.user.id) {
+//       console.log('Checkout - Authenticated user detected:', req.user.id);
+//       cart = await Cart.findOne({
+//         where: { userId: req.user.id, status: CART_STATUS.ACTIVE },
+//         transaction: t,
+//       });
+//       if (!cart) {
+//         cart = await Cart.create(
+//           {
+//             userId: req.user.id,
+//             status: CART_STATUS.ACTIVE,
+//             expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+//           },
+//           { transaction: t },
+//         );
+//       }
+//       const user = await User.findByPk(req.user.id, { attributes: ['email'], transaction: t });
+//       userEmail = user.email;
+//     } else {
+//       console.log('Checkout - Guest checkout detected');
+//       const sessionId = req.session?.id || 'guest-session';
+//       console.log('Checkout - Session ID:', sessionId);
+//       cart = await Cart.findOne({
+//         where: { sessionId, status: CART_STATUS.ACTIVE },
+//         transaction: t,
+//       });
+//       if (!cart) {
+//         cart = await Cart.create(
+//           {
+//             sessionId,
+//             status: CART_STATUS.ACTIVE,
+//             expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+//           },
+//           { transaction: t },
+//         );
+//       }
+//       if (!email) {
+//         throw new Error('Email is required for guest checkout');
+//       }
+//       userEmail = email;
+//     }
+
+//     if (!cart) throw new Error(ERROR_MESSAGES.CART_NOT_FOUND);
+
+//     console.log('Checkout - Cart found:', cart.id);
+
+//     const items = await CartItem.findAll({
+//       where: { cartId: cart.id },
+//       include: [
+//         {
+//           model: Product,
+//           as: 'product',
+//           attributes: ['id', 'name', 'price', 'featuredImage'],
+//         },
+//         {
+//           model: ProductVariant,
+//           as: 'variant',
+//           attributes: ['id', 'size', 'color', 'price'],
+//         },
+//       ],
+//       transaction: t,
+//     });
+
+//     if (!items.length) throw new Error(ERROR_MESSAGES.CART_EMPTY);
+
+//     console.log('Checkout - Cart items:', items.length);
+
+//     // Calculate all financial aspects of the order
+//     let subtotal = 0;
+//     const orderItemsDetails = [];
+
+//     for (const item of items) {
+//       const product = item.product;
+//       const variant = item.variant;
+
+//       // Determine the correct unit price (variant price or product price)
+//       const unitPrice =
+//         variant && variant.price ? parseFloat(variant.price) : parseFloat(product.price);
+
+//       if (isNaN(unitPrice)) {
+//         console.error(`Invalid unitPrice for product ID ${item.productId}: ${unitPrice}`);
+//         throw new Error('Invalid price for product');
+//       }
+
+//       const itemTotal = unitPrice * item.quantity;
+//       subtotal += itemTotal;
+
+//       orderItemsDetails.push({
+//         name: product.name,
+//         quantity: item.quantity,
+//         unitPrice: unitPrice.toFixed(2),
+//         total: itemTotal.toFixed(2),
+//       });
+//     }
+
+//     // Use consistent naming for shipping fees (deliveryFee)
+//     const deliveryFee =
+//       shippingMethod && SHIPPING_FEES[shippingMethod] !== undefined
+//         ? parseFloat(SHIPPING_FEES[shippingMethod])
+//         : parseFloat(SHIPPING_FEES[SHIPPING_METHODS.STANDARD] || 0);
+
+//     // No coupon system, so discount is always 0
+//     const discount = 0.0;
+
+//     // Calculate tax based on taxRate
+//     const tax = taxRate && taxRate > 0 ? parseFloat((subtotal * (taxRate / 100)).toFixed(2)) : 0.0;
+
+//     // Calculate total with all values as parsed floats to avoid string concatenation issues
+//     const totalAmount = parseFloat((subtotal - discount + deliveryFee + tax).toFixed(2));
+
+//     console.log('Order Financial Breakdown:', {
+//       subtotal,
+//       discount,
+//       deliveryFee,
+//       tax,
+//       totalAmount,
+//     });
+
+//     const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+
+//     // Create the order in the database with consistent financial values
+//     const order = await Order.create(
+//       {
+//         userId: req.user?.id || null,
+//         orderNumber,
+//         status: ORDER_STATUS.PENDING,
+//         totalAmount,
+//         subtotal,
+//         tax,
+//         deliveryFee,
+//         shippingCost: deliveryFee, // Set both for backward compatibility
+//         discount,
+//         firstName,
+//         lastName,
+//         deliveryAddress,
+//         city,
+//         postCode,
+//         country,
+//         phone,
+//         paymentMethod,
+//         paymentStatus: PAYMENT_STATUS.PENDING,
+//         shippingMethod: shippingMethod || SHIPPING_METHODS.STANDARD,
+//         email: userEmail,
+//         processedAt: new Date(),
+//       },
+//       { transaction: t },
+//     );
+
+//     // Create order items with consistent pricing and detailed snapshots
+//     const orderItems = items.map((item) => {
+//       const product = item.product;
+//       const variant = item.variant;
+//       const unitPrice =
+//         variant && variant.price ? parseFloat(variant.price) : parseFloat(product.price);
+//       const itemTotal = parseFloat((unitPrice * item.quantity).toFixed(2));
+
+//       return {
+//         orderId: order.id,
+//         productId: item.productId,
+//         variantId: item.variantId,
+//         quantity: item.quantity,
+//         unitPrice,
+//         subtotal: itemTotal,
+//         productSnapshot: {
+//           id: product.id,
+//           name: product.name,
+//           price: unitPrice,
+//           featuredImage: product.featuredImage,
+//           variant: variant
+//             ? {
+//                 id: variant.id,
+//                 size: variant.size,
+//                 color: variant.color,
+//                 price: parseFloat(variant.price),
+//               }
+//             : null,
+//         },
+//       };
+//     });
+
+//     await OrderItem.bulkCreate(orderItems, { transaction: t });
+
+//     // Update stock quantities
+//     await Promise.all(
+//       items.map(async (item) => {
+//         if (item.variantId) {
+//           await ProductVariant.update(
+//             { stockQuantity: sequelize.literal(`"stockQuantity" - ${item.quantity}`) },
+//             { where: { id: item.variantId }, transaction: t },
+//           );
+//         } else {
+//           await Product.update(
+//             { stockQuantity: sequelize.literal(`"stockQuantity" - ${item.quantity}`) },
+//             { where: { id: item.productId }, transaction: t },
+//           );
+//         }
+//       }),
+//     );
+
+//     // Mark cart as converted after checkout
+//     await Cart.update(
+//       { status: CART_STATUS.CONVERTED },
+//       { where: { id: cart.id }, transaction: t },
+//     );
+//     await CartItem.destroy({ where: { cartId: cart.id }, transaction: t });
+
+//     await t.commit();
+
+//     // Handle PayPal payment if selected
+//     let paypalOrderData = null;
+//     if (paymentMethod === PAYMENT_METHODS.PAYPAL) {
+//       try {
+//         const orderWithItems = await Order.findByPk(order.id, {
+//           include: [{ model: OrderItem, as: 'items' }],
+//         });
+
+//         const paypalOrderInfo = {
+//           id: orderWithItems.id,
+//           orderNumber: orderWithItems.orderNumber,
+//           totalAmount: parseFloat(orderWithItems.totalAmount),
+//           subtotal: parseFloat(orderWithItems.subtotal),
+//           tax: parseFloat(orderWithItems.tax || 0),
+//           deliveryFee: parseFloat(orderWithItems.deliveryFee || 0),
+//           discount: parseFloat(orderWithItems.discount || 0),
+//           firstName: orderWithItems.firstName,
+//           lastName: orderWithItems.lastName,
+//           deliveryAddress: orderWithItems.deliveryAddress,
+//           city: orderWithItems.city,
+//           postCode: orderWithItems.postCode,
+//           items: orderWithItems.items.map((item) => ({
+//             productId: item.productId,
+//             name: item.productSnapshot?.name || `Product ID: ${item.productId}`,
+//             unitPrice: parseFloat(item.unitPrice),
+//             quantity: item.quantity,
+//           })),
+//         };
+
+//         const paypalService = await import('../services/paypalService.js');
+//         paypalOrderData = await paypalService.createPayPalOrder(paypalOrderInfo);
+
+//         await Order.update({ paypalOrderId: paypalOrderData.id }, { where: { id: order.id } });
+//       } catch (paypalError) {
+//         console.error('PayPal order creation error:', paypalError);
+//       }
+//     } else {
+//       try {
+//         const orderWithItems = await Order.findByPk(order.id, {
+//           include: [{ model: OrderItem, as: 'items' }],
+//         });
+
+//         await sendOrderConfirmationEmail(userEmail, orderWithItems, orderWithItems.items);
+//       } catch (emailError) {
+//         console.error('Error sending order confirmation email:', emailError);
+//       }
+//     }
+
+//     // Prepare the financial summary for the response
+//     const financialSummary = {
+//       subtotal: parseFloat(subtotal.toFixed(2)),
+//       discount: parseFloat(discount.toFixed(2)),
+//       deliveryFee: parseFloat(deliveryFee.toFixed(2)),
+//       tax: parseFloat(tax.toFixed(2)),
+//       totalAmount: parseFloat(totalAmount.toFixed(2)),
+//       itemCount: items.length,
+//     };
+
+//     // Return response based on payment method
+//     if (paymentMethod === PAYMENT_METHODS.PAYPAL && paypalOrderData) {
+//       return ApiResponse.success(
+//         res,
+//         'Checkout successful - Redirecting to PayPal',
+//         {
+//           orderId: order.id,
+//           orderNumber: order.orderNumber,
+//           summary: financialSummary,
+//           paypal: {
+//             orderId: paypalOrderData.id,
+//             approvalUrl: paypalOrderData.links.find((link) => link.rel === 'approve').href,
+//           },
+//         },
+//         HTTP_STATUS_CODES.CREATED,
+//       );
+//     } else {
+//       return ApiResponse.success(
+//         res,
+//         'Checkout successful',
+//         {
+//           orderId: order.id,
+//           orderNumber: order.orderNumber,
+//           summary: financialSummary,
+//         },
+//         HTTP_STATUS_CODES.CREATED,
+//       );
+//     }
+//   } catch (error) {
+//     await t.rollback();
+//     console.error('Checkout error:', error);
+//     next(error);
+//   }
+// };
 
 async function getCartItems(cartId) {
   try {
