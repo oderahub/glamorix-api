@@ -43,3 +43,13 @@ export const verifyOtp = async (userId, otp) => {
   );
   return true;
 };
+
+export const resendOtp = async (req, res, next) => {
+  const { userId } = req.body;
+  try {
+    const result = await generateAndSendOtp(userId);
+    return ApiResponse.success(res, 'OTP has been resent successfully', { userId });
+  } catch (error) {
+    next(error);
+  }
+};
