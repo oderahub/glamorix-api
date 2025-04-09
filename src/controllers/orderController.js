@@ -10,30 +10,6 @@ import {
 } from '../constants/constant.js';
 
 // Helper function to transform order images
-// const transformOrderImages = (req, order) => {
-//   if (!order || !order.items) return order;
-
-//   const baseUrl = `${req.protocol}://${req.get('host')}`;
-//   const transformedOrder = { ...order.toJSON() };
-
-//   transformedOrder.items = transformedOrder.items.map((item) => {
-//     // Add image URL to the product snapshot if imageId is available
-//     if (item.productSnapshot && item.productSnapshot.imageId && item.productImage) {
-//       item.productSnapshot.imageUrl = `${baseUrl}/api/products/images/${item.productSnapshot.imageId}`;
-//     }
-
-//     // Clean up by removing base64 data if present
-//     if (item.productImage) {
-//       delete item.productImage.imageData;
-//     }
-
-//     return item;
-//   });
-
-//   return transformedOrder;
-// };
-
-// Helper function to transform order images
 const transformOrderImages = (req, order) => {
   if (!order || !order.items) return order;
 
