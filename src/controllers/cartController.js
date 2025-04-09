@@ -548,20 +548,30 @@ export const checkout = async (req, res, next) => {
 
     console.log('Checkout - Cart items:', items.length);
 
-    // Calculate all financial aspects of the order
+    // CRITICAL FIX: Calculate subtotal properly based on cart items
     let subtotal = 0;
     const orderItemsDetails = [];
 
-    // IMPORTANT FIX: Properly calculate prices from product and variant
+    // Process each item in the cart to determine the correct price
     for (const item of items) {
       const product = item.product;
       const variant = item.variant;
 
       // Determine the correct unit price (variant price or product price)
-      const unitPrice =
-        variant && variant.price !== null ? parseFloat(variant.price) : parseFloat(product.price);
+      let unitPrice;
 
-      if (isNaN(unitPrice)) {
+      if (variant && variant.price !== null && variant.price !== undefined) {
+        unitPrice = parseFloat(variant.price);
+      } else {
+        unitPrice = parseFloat(product.price);
+      }
+
+      // Log for debugging
+      console.log(
+        `Item ${product.name}: Product price = ${product.price}, Variant price = ${variant?.price}, Using price = ${unitPrice}`,
+      );
+
+      if (isNaN(unitPrice) || unitPrice <= 0) {
         console.error(`Invalid unitPrice for product ID ${item.productId}: ${unitPrice}`);
         throw new Error('Invalid price for product');
       }
@@ -581,11 +591,14 @@ export const checkout = async (req, res, next) => {
       });
     }
 
-    // Use consistent naming for shipping fees (deliveryFee)
-    const deliveryFee =
-      shippingMethod && SHIPPING_FEES[shippingMethod] !== undefined
-        ? parseFloat(SHIPPING_FEES[shippingMethod])
-        : parseFloat(SHIPPING_FEES[SHIPPING_METHODS.STANDARD] || 0);
+    // FIXED: Set delivery fee to 0 instead of using constants
+    // const deliveryFee =
+    //   shippingMethod && SHIPPING_FEES[shippingMethod] !== undefined
+    //     ? parseFloat(SHIPPING_FEES[shippingMethod])
+    //     : parseFloat(SHIPPING_FEES[SHIPPING_METHODS.STANDARD] || 0);
+
+    // Override with 0 delivery fee
+    const deliveryFee = 0.0;
 
     // No coupon system, so discount is always 0
     const discount = 0.0;
@@ -639,9 +652,13 @@ export const checkout = async (req, res, next) => {
       const product = item.product;
       const variant = item.variant;
 
-      // IMPORTANT FIX: Properly determine the unit price
-      const unitPrice =
-        variant && variant.price !== null ? parseFloat(variant.price) : parseFloat(product.price);
+      // FIXED: Properly determine the unit price
+      let unitPrice;
+      if (variant && variant.price !== null && variant.price !== undefined) {
+        unitPrice = parseFloat(variant.price);
+      } else {
+        unitPrice = parseFloat(product.price);
+      }
 
       const itemTotal = parseFloat((unitPrice * item.quantity).toFixed(2));
 
@@ -662,7 +679,7 @@ export const checkout = async (req, res, next) => {
                 id: variant.id,
                 size: variant.size,
                 color: variant.color,
-                price: parseFloat(variant.price),
+                price: variant.price ? parseFloat(variant.price) : null,
               }
             : null,
         },
