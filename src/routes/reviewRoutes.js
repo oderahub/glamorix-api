@@ -7,6 +7,7 @@ import {
   deleteReview,
   adminGetAllReviews,
   adminDeleteReview,
+  getProductReviewStats,
 } from '../controllers/reviewController.js';
 import { ROLES } from '../constants/constant.js';
 
@@ -15,6 +16,7 @@ const router = express.Router();
 // Public routes (no authentication required)
 router.get('/products/:productId/reviews', getProductReviews);
 // Note: review stats are now handled by the Product model's getReviewStatistics method
+router.get('/products/:productId/review-stats', getProductReviewStats);
 
 // Customer routes (authentication required)
 router.post('/reviews', authenticateToken, addReview);
