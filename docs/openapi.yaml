@@ -554,18 +554,23 @@ components:
         totalAmount:
           type: number
           format: float
-        subtotal:
-          type: number
-          format: float
-        tax:
-          type: number
-          format: float
-        deliveryFee:
-          type: number
-          format: float
-        discount:
-          type: number
-          format: float
+          description: Total order amount in GBP
+          subtotal:
+            type: number
+            format: float
+            description: Subtotal in GBP
+          tax:
+            type: number
+            format: float
+            description: Tax amount in GBP
+          deliveryFee:
+            type: number
+            format: float
+            description: Delivery fee in GBP
+          discount:
+            type: number
+            format: float
+            description: Discount amount in GBP
         firstName:
           type: string
         lastName:
@@ -797,20 +802,23 @@ components:
             subtotal:
               type: number
               format: float
+              description: Amount in GBP
             discount:
               type: number
               format: float
+              description: Amount in GBP
             deliveryFee:
               type: number
               format: float
+              description: Amount in GBP
             tax:
               type: number
               format: float
+              description: Amount in GBP
             totalAmount:
               type: number
               format: float
-            itemCount:
-              type: integer
+              description: Amount in GBP
     PayPalCaptureResponse:
       type: object
       properties:
