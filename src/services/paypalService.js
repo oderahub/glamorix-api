@@ -44,10 +44,61 @@ async function generateAccessToken() {
  * @param {Object} orderData The order data
  * @returns {Promise<Object>} The created PayPal order
  */
+/**
+ * Create a PayPal order
+ * @param {Object} orderData The order data
+ * @returns {Promise<Object>} The created PayPal order
+ */
 export async function createPayPalOrder(orderData) {
   try {
     const accessToken = await generateAccessToken();
 
+    // Ensure all financial values are properly parsed as floats and rounded to 2 decimal places
+    const subtotal = parseFloat(orderData.subtotal).toFixed(2);
+    const deliveryFee = parseFloat(orderData.deliveryFee || 0).toFixed(2);
+    const tax = parseFloat(orderData.tax || 0).toFixed(2);
+    const discount = parseFloat(orderData.discount || 0).toFixed(2);
+
+    // Calculate total independently to double-check it matches the provided total
+    const calculatedTotal = (
+      parseFloat(subtotal) +
+      parseFloat(deliveryFee) -
+      parseFloat(discount) +
+      parseFloat(tax)
+    ).toFixed(2);
+
+    // Use calculated total if it differs from provided total (fail-safe)
+    const totalAmount =
+      Math.abs(parseFloat(calculatedTotal) - parseFloat(orderData.totalAmount)) < 0.01
+        ? parseFloat(orderData.totalAmount).toFixed(2)
+        : calculatedTotal;
+
+    console.log('PayPal Order Financial Values:', {
+      providedTotal: parseFloat(orderData.totalAmount).toFixed(2),
+      calculatedTotal,
+      finalTotal: totalAmount,
+      subtotal,
+      deliveryFee,
+      tax,
+      discount,
+    });
+
+    // Prepare items array with consistent pricing
+    const itemsArray = orderData.items.map((item) => {
+      const itemUnitPrice = parseFloat(item.unitPrice).toFixed(2);
+
+      return {
+        name: item.name || `Product ID: ${item.productId}`,
+        unit_amount: {
+          currency_code: 'USD',
+          value: itemUnitPrice,
+        },
+        quantity: item.quantity.toString(),
+        sku: item.productId,
+      };
+    });
+
+    // Construct the payload with all values properly formatted
     const payload = {
       intent: 'CAPTURE',
       purchase_units: [
@@ -57,35 +108,27 @@ export async function createPayPalOrder(orderData) {
           custom_id: orderData.id,
           amount: {
             currency_code: 'USD',
-            value: orderData.totalAmount.toFixed(2),
+            value: totalAmount,
             breakdown: {
               item_total: {
                 currency_code: 'USD',
-                value: orderData.subtotal.toFixed(2),
+                value: subtotal,
               },
               shipping: {
                 currency_code: 'USD',
-                value: (orderData.deliveryFee || 0).toFixed(2),
+                value: deliveryFee,
               },
               tax_total: {
                 currency_code: 'USD',
-                value: (orderData.tax || 0).toFixed(2),
+                value: tax,
               },
               discount: {
                 currency_code: 'USD',
-                value: (orderData.discount || 0).toFixed(2),
+                value: discount,
               },
             },
           },
-          items: orderData.items.map((item) => ({
-            name: item.name || `Product ID: ${item.productId}`,
-            unit_amount: {
-              currency_code: 'USD',
-              value: item.unitPrice.toFixed(2),
-            },
-            quantity: item.quantity.toString(),
-            sku: item.productId,
-          })),
+          items: itemsArray,
           shipping: {
             name: {
               full_name: `${orderData.firstName} ${orderData.lastName}`,
@@ -104,8 +147,8 @@ export async function createPayPalOrder(orderData) {
         landing_page: 'BILLING',
         shipping_preference: 'SET_PROVIDED_ADDRESS',
         user_action: 'PAY_NOW',
-        return_url: `${process.env.FRONTEND_URL || 'http://localhost:5174'}/order-completed`,
-        cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5174'}/checkout/cancel`,
+        return_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/order-completed`,
+        cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/checkout/cancel`,
       },
     };
 
@@ -135,105 +178,6 @@ export async function createPayPalOrder(orderData) {
  * @param {string} orderId The PayPal order ID
  * @returns {Promise<Object>} The captured payment details
  */
-// export async function capturePayPalPayment(orderId) {
-//   try {
-//     const accessToken = await generateAccessToken();
-
-//     const response = await axios({
-//       method: 'post',
-//       url: `${PAYPAL_API_BASE}/v2/checkout/orders/${orderId}/capture`,
-//       headers: {
-//         'Content-Type': 'application/json',
-//         Authorization: `Bearer ${accessToken}`,
-//       },
-//     });
-
-//     return response.data;
-//   } catch (error) {
-//     console.error('Failed to capture PayPal payment:', error.message);
-//     if (error.response) {
-//       console.error('Response data:', error.response.data);
-//       console.error('Response status:', error.response.status);
-//     }
-//     throw new Error('Failed to capture PayPal payment');
-//   }
-// }
-
-// export const capturePayPalPayment = async (req, res, next) => {
-//   const { paypalOrderId } = req.params;
-
-//   let transaction;
-//   try {
-//     transaction = await sequelize.transaction();
-
-//     // Find the order by PayPal order ID
-//     const order = await Order.findOne({
-//       where: { paypalOrderId },
-//       include: [{ model: OrderItem, as: 'items' }],
-//       transaction,
-//     });
-
-//     if (!order) {
-//       if (transaction) await transaction.rollback();
-//       return ApiResponse.error(res, ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
-//     }
-
-//     // Check if the order has already been paid
-//     if (order.paymentStatus === PAYMENT_STATUS.PAID) {
-//       if (transaction) await transaction.rollback();
-//       return ApiResponse.success(res, 'Payment already processed', {
-//         orderId: order.id,
-//         orderNumber: order.orderNumber,
-//         status: order.status,
-//         paymentStatus: order.paymentStatus,
-//         captureId: order.paypalCaptureId,
-//       });
-//     }
-
-//     // Capture the payment
-//     const captureData = await capturePayPalPayment(paypalOrderId);
-
-//     // Update the order with payment details
-//     const captureId = captureData.purchase_units[0].payments.captures[0].id;
-//     const paymentStatus =
-//       captureData.status === 'COMPLETED' ? PAYMENT_STATUS.PAID : PAYMENT_STATUS.PENDING;
-
-//     await order.update(
-//       {
-//         status: ORDER_STATUS.PROCESSING,
-//         paymentStatus,
-//         paypalCaptureId: captureId,
-//         paidAt: new Date(),
-//       },
-//       { transaction },
-//     );
-
-//     // If payment is successful, send confirmation email
-//     if (paymentStatus === PAYMENT_STATUS.PAID) {
-//       await sendOrderConfirmationEmail(order.email, order, order.items);
-//     }
-
-//     await transaction.commit();
-
-//     return ApiResponse.success(res, 'Payment captured successfully', {
-//       orderId: order.id,
-//       orderNumber: order.orderNumber,
-//       status: order.status,
-//       paymentStatus,
-//       captureId,
-//     });
-//   } catch (error) {
-//     if (transaction) await transaction.rollback();
-//     console.error('Error capturing PayPal payment:', error);
-
-//     // Check if this is a known PayPal error about multiple capture attempts
-//     if (error.message && error.message.includes('already been processed')) {
-//       return ApiResponse.error(res, error.message, HTTP_STATUS_CODES.BAD_REQUEST);
-//     }
-
-//     next(error);
-//   }
-// };
 
 /**
  * Capture a PayPal payment
