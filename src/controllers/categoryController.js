@@ -240,11 +240,6 @@ const transformCategoryData = (category, req) => {
 //     }
 // };
 
-import { Category, ProductCategory, Product } from '../models/index.js';
-import ApiResponse from '../utils/ApiResponse.js';
-import { HTTP_STATUS_CODES, ERROR_MESSAGES } from '../constants/constant.js';
-import slugify from 'slugify';
-
 export const getAllCategories = async (req, res, next) => {
   try {
     const categories = await Category.findAll({
