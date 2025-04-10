@@ -71,11 +71,11 @@ export const getCart = async (req, res, next) => {
         cart = activeCarts.length
           ? activeCarts[0]
           : await Cart.create({
-            userId: req.user.id,
-            sessionId: null,
-            status: CART_STATUS.ACTIVE,
-            expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          });
+              userId: req.user.id,
+              sessionId: null,
+              status: CART_STATUS.ACTIVE,
+              expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            });
       }
     } else {
       const sessionId = req.session?.id || 'guest-session';
@@ -92,11 +92,11 @@ export const getCart = async (req, res, next) => {
         cart = activeCarts.length
           ? activeCarts[0]
           : await Cart.create({
-            userId: null,
-            sessionId,
-            status: CART_STATUS.ACTIVE,
-            expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          });
+              userId: null,
+              sessionId,
+              status: CART_STATUS.ACTIVE,
+              expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            });
       }
     }
 
@@ -139,19 +139,21 @@ export const getCart = async (req, res, next) => {
           createdAt: product.createdAt,
           updatedAt: product.updatedAt,
           variants: variant
-            ? [{
-              id: variant.id,
-              productId: variant.productId,
-              size: variant.size,
-              color: variant.color,
-              material: variant.material,
-              additionalAttributes: variant.additionalAttributes || null,
-              price: parseFloat(variant.price || product.price),
-              stockQuantity: null, // Not used, included for compatibility
-              sku: variant.sku,
-              createdAt: variant.createdAt,
-              updatedAt: variant.updatedAt,
-            }]
+            ? [
+                {
+                  id: variant.id,
+                  productId: variant.productId,
+                  size: variant.size,
+                  color: variant.color,
+                  material: variant.material,
+                  additionalAttributes: variant.additionalAttributes || null,
+                  price: parseFloat(variant.price || product.price),
+                  stockQuantity: null, // Not used, included for compatibility
+                  sku: variant.sku,
+                  createdAt: variant.createdAt,
+                  updatedAt: variant.updatedAt,
+                },
+              ]
             : [],
         },
       };
@@ -420,8 +422,10 @@ export const checkout = async (req, res, next) => {
 
     const validPaymentMethods = Object.values(PAYMENT_METHODS);
     const paymentMethod = validPaymentMethods.find(
-      (method) => method.toLowerCase() === rawPaymentMethod?.toLowerCase()
-    ) ? rawPaymentMethod.toLowerCase() : PAYMENT_METHODS.PAYPAL || 'paypal';
+      (method) => method.toLowerCase() === rawPaymentMethod?.toLowerCase(),
+    )
+      ? rawPaymentMethod.toLowerCase()
+      : PAYMENT_METHODS.PAYPAL || 'paypal';
 
     if (req.user && req.user.id) {
       cart = await Cart.findOne({
@@ -484,7 +488,9 @@ export const checkout = async (req, res, next) => {
         throw new Error(`Insufficient stock for product ${product?.name || item.productId}`);
       }
 
-      const unitPrice = variant ? parseFloat(variant.price || product.price) : parseFloat(product.price);
+      const unitPrice = variant
+        ? parseFloat(variant.price || product.price)
+        : parseFloat(product.price);
       if (isNaN(unitPrice)) throw new Error('Invalid price for product');
 
       subtotal += unitPrice * item.quantity;
@@ -496,9 +502,10 @@ export const checkout = async (req, res, next) => {
       });
     }
 
-    const deliveryFee = shippingMethod && SHIPPING_FEES[shippingMethod] !== undefined
-      ? parseFloat(SHIPPING_FEES[shippingMethod])
-      : 0.0;
+    const deliveryFee =
+      shippingMethod && SHIPPING_FEES[shippingMethod] !== undefined
+        ? parseFloat(SHIPPING_FEES[shippingMethod])
+        : 0.0;
     const discount = 0.0;
     const tax = taxRate && taxRate > 0 ? subtotal * (taxRate / 100) : 0.0;
     const totalAmount = subtotal - discount + deliveryFee + tax;
@@ -533,7 +540,9 @@ export const checkout = async (req, res, next) => {
     const orderItems = items.map((item) => {
       const product = productMap.get(item.productId);
       const variant = item.variantId ? variantMap.get(item.variantId) : null;
-      const unitPrice = variant ? parseFloat(variant.price || product.price) : parseFloat(product.price);
+      const unitPrice = variant
+        ? parseFloat(variant.price || product.price)
+        : parseFloat(product.price);
 
       return {
         orderId: order.id,
@@ -659,12 +668,6 @@ export const checkout = async (req, res, next) => {
     next(error);
   }
 };
-
-
-
-
-
-
 
 // import sequelize from '../config/database.js';
 // import {
