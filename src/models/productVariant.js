@@ -39,7 +39,7 @@ const ProductVariant = sequelize.define(
     },
     stockQuantity: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       defaultValue: 0,
       field: 'stockQuantity'
     },
