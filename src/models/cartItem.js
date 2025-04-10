@@ -27,7 +27,7 @@ const CartItem = sequelize.define(
     },
     variantId: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: 'ProductVariants',
         key: 'id'
@@ -39,6 +39,14 @@ const CartItem = sequelize.define(
       defaultValue: 1,
       validate: {
         min: 1
+      }
+    },
+    unitPrice: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      validate: {
+        isDecimal: true,
+        min: 0
       }
     },
     addedAt: {

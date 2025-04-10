@@ -6,7 +6,7 @@ info:
   contact:
     email: support@omorix.com
 servers:
-  - url: https://glamorix-api-1.onrender.com/api
+  - url: https://omotix-backend.onrender.com/api
     description: Production Server
   - url: http://localhost:3000/api
     description: Development Server
@@ -334,7 +334,7 @@ components:
         sku:
           type: string
         isActive:
-          type: boolean
+          type: Enum
         featuredImage:
           type: string
           format: base64
@@ -382,9 +382,6 @@ components:
           description: Always 0, stock managed by ProductVariant
         sku:
           type: string
-        isActive:
-          type: boolean
-          default: true
         categoryIds:
           type: array
           items:
@@ -446,8 +443,6 @@ components:
           description: Always 0, stock managed by ProductVariant
         sku:
           type: string
-        isActive:
-          type: boolean
         categoryIds:
           type: array
           items:
