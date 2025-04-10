@@ -76,23 +76,23 @@ const transformCategoryData = (category, req) => {
 //     }
 // };
 
-// export const getCategoryImage = async (req, res, next) => {
-//     try {
-//         const { id } = req.params;
-//         const category = await Category.findByPk(id);
+export const getCategoryImage = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const category = await Category.findByPk(id);
 
-//         if (!category || !category.image) {
-//             return ApiResponse.error(res, 'Image not found', 404);
-//         }
+    if (!category || !category.image) {
+      return ApiResponse.error(res, 'Image not found', 404);
+    }
 
-//         const imageBuffer = Buffer.from(category.image, 'base64');
-//         res.set('Content-Type', 'image/jpeg'); // You might want to store and use the actual mime type
-//         res.set('Cache-Control', 'public, max-age=31557600'); // Cache for 1 year
-//         return res.send(imageBuffer);
-//     } catch (error) {
-//         next(error);
-//     }
-// };
+    const imageBuffer = Buffer.from(category.image, 'base64');
+    res.set('Content-Type', 'image/jpeg'); // You might want to store and use the actual mime type
+    res.set('Cache-Control', 'public, max-age=31557600'); // Cache for 1 year
+    return res.send(imageBuffer);
+  } catch (error) {
+    next(error);
+  }
+};
 
 // export const createMainCategory = async (req, res, next) => {
 //     try {
