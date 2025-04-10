@@ -1,5 +1,5 @@
-import { DataTypes, Op } from 'sequelize';
-import sequelize from '../config/database.js';
+import { DataTypes, Op } from 'sequelize'
+import sequelize from '../config/database.js'
 
 const CartItem = sequelize.define(
   'CartItem',
@@ -7,42 +7,53 @@ const CartItem = sequelize.define(
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
-      primaryKey: true,
+      primaryKey: true
     },
     cartId: {
       type: DataTypes.UUID,
       allowNull: false,
-      references: { model: 'Carts', key: 'id' },
+      references: {
+        model: 'Carts',
+        key: 'id'
+      }
     },
     productId: {
       type: DataTypes.UUID,
       allowNull: false,
-      references: { model: 'Products', key: 'id' },
+      references: {
+        model: 'Products',
+        key: 'id'
+      }
     },
     variantId: {
       type: DataTypes.UUID,
-      allowNull: false,
-      references: { model: 'ProductVariants', key: 'id' },
+      allowNull: true,
+      references: {
+        model: 'ProductVariants',
+        key: 'id'
+      }
     },
     quantity: {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 1,
-      validate: { min: 1 },
+      validate: {
+        min: 1
+      }
     },
     unitPrice: {
-      type: DataTypes.DECIMAL(15, 2), // Allows prices like 1000000.00
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       validate: {
         isDecimal: true,
-        min: 0, // Ensures non-negative prices
-      },
+        min: 0
+      }
     },
     addedAt: {
       type: DataTypes.DATE,
       allowNull: false,
-      defaultValue: DataTypes.NOW,
-    },
+      defaultValue: DataTypes.NOW
+    }
   },
   {
     timestamps: true,
@@ -54,16 +65,22 @@ const CartItem = sequelize.define(
         name: 'cart_item_unique_index',
         fields: ['cartId', 'productId', 'variantId'],
         unique: true,
-        where: { variantId: { [Op.ne]: null } },
+        where: {
+          variantId: {
+            [Op.ne]: null
+          }
+        }
       },
       {
         name: 'cart_item_unique_no_variant_index',
         fields: ['cartId', 'productId'],
         unique: true,
-        where: { variantId: null },
-      },
-    ],
+        where: {
+          variantId: null
+        }
+      }
+    ]
   }
-);
+)
 
-export default CartItem;
+export default CartItem
