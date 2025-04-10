@@ -22,6 +22,7 @@ const router = express.Router();
 
 // Routes that support both authenticated users and guests
 router.get('/cart/:cartId', optionalAuthenticateToken, getCart);
+
 router.post('/cart', optionalAuthenticateToken, validateRequest(cartItemSchema), addToCart);
 router.post('/cart/checkout', optionalAuthenticateToken, checkout);
 
