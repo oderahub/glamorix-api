@@ -4,32 +4,32 @@ import { HTTP_STATUS_CODES, ERROR_MESSAGES } from '../constants/constant.js';
 import slugify from 'slugify';
 
 // Helper function to transform category data for API responses
-// const transformCategoryData = (category, req) => {
-//     if (!category) return null;
+const transformCategoryData = (category, req) => {
+  if (!category) return null;
 
-//     const categoryJSON = category.toJSON ? category.toJSON() : { ...category };
+  const categoryJSON = category.toJSON ? category.toJSON() : { ...category };
 
-//     // Determine protocol: prefer X-Forwarded-Proto header, fall back to req.protocol
-//     const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-//     const host = req.get('host');
-//     const baseUrl = `${protocol}://${host}`;
+  // Determine protocol: prefer X-Forwarded-Proto header, fall back to req.protocol
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.get('host');
+  const baseUrl = `${protocol}://${host}`;
 
-//     // Add image URL if image exists
-//     if (categoryJSON.image) {
-//         categoryJSON.imageUrl = `${baseUrl}/api/categories/images/${categoryJSON.id}`;
-//         // Remove the large base64 string from response
-//         delete categoryJSON.image;
-//     }
+  // Add image URL if image exists
+  if (categoryJSON.image) {
+    categoryJSON.imageUrl = `${baseUrl}/api/categories/images/${categoryJSON.id}`;
+    // Remove the large base64 string from response
+    delete categoryJSON.image;
+  }
 
-//     // Transform subcategories recursively if they exist
-//     if (categoryJSON.subcategories && categoryJSON.subcategories.length > 0) {
-//         categoryJSON.subcategories = categoryJSON.subcategories.map(subcat =>
-//             transformCategoryData(subcat, req)
-//         );
-//     }
+  // Transform subcategories recursively if they exist
+  if (categoryJSON.subcategories && categoryJSON.subcategories.length > 0) {
+    categoryJSON.subcategories = categoryJSON.subcategories.map((subcat) =>
+      transformCategoryData(subcat, req),
+    );
+  }
 
-//     return categoryJSON;
-// };
+  return categoryJSON;
+};
 
 // export const getAllCategories = async (req, res, next) => {
 //     try {
