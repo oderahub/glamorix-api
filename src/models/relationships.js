@@ -1,98 +1,128 @@
-import User from './user.js'
-import Customer from './customer.js'
-import Category from './category.js'
-import Product from './product.js'
-import ProductImage from './productImage.js'
-import ProductCategory from './productCategory.js'
-import ProductVariant from './productVariant.js'
-import Review from './review.js'
-import Order from './order.js'
-import OrderItem from './orderItem.js'
-import Cart from './cart.js'
-import CartItem from './cartItem.js'
-import AdminLog from './adminLog.js'
-import Address from './address.js'
+import User from './user.js';
+import Customer from './customer.js';
+import Category from './category.js';
+import Product from './product.js';
+import ProductImage from './productImage.js';
+import ProductCategory from './productCategory.js';
+import ProductVariant from './productVariant.js';
+import Review from './review.js';
+import Order from './order.js';
+import OrderItem from './orderItem.js';
+import Cart from './cart.js';
+import CartItem from './cartItem.js';
+import AdminLog from './adminLog.js';
+import Address from './address.js';
+import Wishlist from './wishlist.js';
 
 // Category self-referencing relationship
-Category.belongsTo(Category, { as: 'parent', foreignKey: 'parentId' })
-Category.hasMany(Category, { as: 'subcategories', foreignKey: 'parentId' })
+Category.belongsTo(Category, { as: 'parent', foreignKey: 'parentId' });
+Category.hasMany(Category, { as: 'subcategories', foreignKey: 'parentId' });
 
 // Product-Category relationship
-Product.belongsToMany(Category, { through: ProductCategory, foreignKey: 'productId', as: 'categories' });
-Category.belongsToMany(Product, { through: ProductCategory, foreignKey: 'categoryId', as: 'products' });
-
+Product.belongsToMany(Category, {
+  through: ProductCategory,
+  foreignKey: 'productId',
+  as: 'categories',
+});
+Category.belongsToMany(Product, {
+  through: ProductCategory,
+  foreignKey: 'categoryId',
+  as: 'products',
+});
 
 // Product relationships
-Product.hasMany(ProductImage, { foreignKey: 'productId', as: 'images' })
-ProductImage.belongsTo(Product, { foreignKey: 'productId' })
+Product.hasMany(ProductImage, { foreignKey: 'productId', as: 'images' });
+ProductImage.belongsTo(Product, { foreignKey: 'productId' });
 
-Product.hasMany(ProductVariant, { foreignKey: 'productId', as: 'variants' })
-ProductVariant.belongsTo(Product, { foreignKey: 'productId' })
+Product.hasMany(ProductVariant, { foreignKey: 'productId', as: 'variants' });
+ProductVariant.belongsTo(Product, { foreignKey: 'productId' });
 
 // User relationships
-User.hasOne(Customer, { foreignKey: 'userId', as: 'customerProfile' })
-Customer.belongsTo(User, { foreignKey: 'userId' })
+User.hasOne(Customer, { foreignKey: 'userId', as: 'customerProfile' });
+Customer.belongsTo(User, { foreignKey: 'userId' });
 
-User.hasMany(Order, { foreignKey: 'userId', as: 'orders' })
-Order.belongsTo(User, { foreignKey: 'userId', as: 'user' })
+User.hasMany(Order, { foreignKey: 'userId', as: 'orders' });
+Order.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
-User.hasMany(Review, { foreignKey: 'userId', as: 'reviews' })
-Review.belongsTo(User, { foreignKey: 'userId', as: 'user' })
+User.hasMany(Review, { foreignKey: 'userId', as: 'reviews' });
+Review.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 // Product and Review relationships
-Product.hasMany(Review, { foreignKey: 'productId', as: 'reviews' })
-Review.belongsTo(Product, { foreignKey: 'productId', as: 'product' })
+Product.hasMany(Review, { foreignKey: 'productId', as: 'reviews' });
+Review.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
 
 // Order and OrderItem relationships
-Order.hasMany(OrderItem, { foreignKey: 'orderId', as: 'items' })
-OrderItem.belongsTo(Order, { foreignKey: 'orderId' })
+Order.hasMany(OrderItem, { foreignKey: 'orderId', as: 'items' });
+OrderItem.belongsTo(Order, { foreignKey: 'orderId' });
+
+//Order and Product Image Relaitonships
+
+// OrderItem and ProductImage relationship
+// This creates a many-to-one relationship between OrderItem and ProductImage
+// where the join is based on the productId being the same
+OrderItem.belongsTo(ProductImage, {
+  foreignKey: 'productId',
+  targetKey: 'productId',
+  as: 'productImage',
+  scope: {
+    isDefault: true,
+  },
+});
 
 // Product and OrderItem relationships
-Product.hasMany(OrderItem, { foreignKey: 'productId' })
-OrderItem.belongsTo(Product, { foreignKey: 'productId', as: 'product' })
+Product.hasMany(OrderItem, { foreignKey: 'productId' });
+OrderItem.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
 
 // ProductVariant and OrderItem relationships
-ProductVariant.hasMany(OrderItem, { foreignKey: 'variantId' })
-OrderItem.belongsTo(ProductVariant, { foreignKey: 'variantId', as: 'variant' })
+ProductVariant.hasMany(OrderItem, { foreignKey: 'variantId' });
+OrderItem.belongsTo(ProductVariant, { foreignKey: 'variantId', as: 'variant' });
 
 // User and Cart relationships
-User.hasMany(Cart, { foreignKey: 'userId', as: 'carts' })
-Cart.belongsTo(User, { foreignKey: 'userId', as: 'user' })
+User.hasMany(Cart, { foreignKey: 'userId', as: 'carts' });
+Cart.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 // Cart and CartItem relationships
-Cart.hasMany(CartItem, { foreignKey: 'cartId', as: 'items' })
-CartItem.belongsTo(Cart, { foreignKey: 'cartId' })
+Cart.hasMany(CartItem, { foreignKey: 'cartId', as: 'items' });
+CartItem.belongsTo(Cart, { foreignKey: 'cartId' });
 
 // Product and CartItem relationships
-Product.hasMany(CartItem, { foreignKey: 'productId' })
-CartItem.belongsTo(Product, { foreignKey: 'productId', as: 'product' })
+Product.hasMany(CartItem, { foreignKey: 'productId' });
+CartItem.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
 
 // ProductVariant and CartItem relationships
-ProductVariant.hasMany(CartItem, { foreignKey: 'variantId' })
-CartItem.belongsTo(ProductVariant, { foreignKey: 'variantId', as: 'variant' })
+ProductVariant.hasMany(CartItem, { foreignKey: 'variantId' });
+CartItem.belongsTo(ProductVariant, { foreignKey: 'variantId', as: 'variant' });
 
 // AdminLog and User relationships
-User.hasMany(AdminLog, { foreignKey: 'userId', as: 'adminLogs' })
-AdminLog.belongsTo(User, { foreignKey: 'userId' })
+User.hasMany(AdminLog, { foreignKey: 'userId', as: 'adminLogs' });
+AdminLog.belongsTo(User, { foreignKey: 'userId' });
 
-// Address 
+// Address
 // Address associations
 User.hasMany(Address, { foreignKey: 'userId' });
 Address.belongsTo(User, { foreignKey: 'userId' });
 
+// Wishlist associations
+User.hasMany(Wishlist, { foreignKey: 'userId', as: 'wishlists' });
+Wishlist.belongsTo(User, { foreignKey: 'userId' });
+
+Product.hasMany(Wishlist, { foreignKey: 'productId' });
+Wishlist.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
+
 export {
-    User,
-    Customer,
-    Category,
-    Product,
-    ProductImage,
-    ProductCategory,
-    ProductVariant,
-    Review,
-    Order,
-    OrderItem,
-    Cart,
-    CartItem,
-    AdminLog,
-    Address
-}
+  User,
+  Customer,
+  Category,
+  Product,
+  ProductImage,
+  ProductCategory,
+  ProductVariant,
+  Review,
+  Order,
+  OrderItem,
+  Cart,
+  CartItem,
+  AdminLog,
+  Address,
+  Wishlist,
+};
