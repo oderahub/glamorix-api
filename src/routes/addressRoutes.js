@@ -1,5 +1,11 @@
 import express from 'express';
-import { createAddress, getAddresses, updateAddress, deleteAddress, setDefaultAddress } from '../controllers/addressController.js';
+import {
+  createAddress,
+  getAddresses,
+  updateAddress,
+  deleteAddress,
+  setDefaultAddress,
+} from '../controllers/addressController.js';
 import { authenticateToken } from '../utils/authMiddleware.js';
 
 const router = express.Router();

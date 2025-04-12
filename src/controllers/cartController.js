@@ -199,40 +199,66 @@ export const addToCart = async (req, res, next) => {
     if (quantity <= 0) throw new Error('Quantity must be positive');
 
     let cart;
+    // For authenticated users with a valid user ID
     if (req.user && req.user.id) {
       cart = await Cart.findOne({
-        where: { userId: req.user.id, status: CART_STATUS.ACTIVE },
+        where: {
+          userId: req.user.id,
+          status: CART_STATUS.ACTIVE,
+        },
         order: [['createdAt', 'ASC']],
         transaction: t,
       });
+
+      // If no cart exists, create a new one
       if (!cart) {
-        cart = await Cart.create(
-          {
-            userId: req.user.id,
-            sessionId: null,
-            status: CART_STATUS.ACTIVE,
-            expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          },
-          { transaction: t },
-        );
+        console.log('AddToCart - Creating new cart for user:', req.user.id);
+        try {
+          cart = await Cart.create(
+            {
+              userId: req.user.id,
+              sessionId: null,
+              status: CART_STATUS.ACTIVE,
+              expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            },
+            { transaction: t },
+          );
+          console.log('AddToCart - New cart created:', cart.id);
+        } catch (cartError) {
+          console.error('Error creating cart for authenticated user:', cartError);
+          throw cartError;
+        }
       }
     } else {
       const sessionId = req.session?.id || 'guest-session';
       cart = await Cart.findOne({
-        where: { sessionId, status: CART_STATUS.ACTIVE },
+        where: {
+          sessionId,
+          userId: null, // Explicitly look for null userId
+          status: CART_STATUS.ACTIVE,
+        },
         order: [['createdAt', 'ASC']],
         transaction: t,
       });
+
+      // If no cart exists, create a new one
       if (!cart) {
-        cart = await Cart.create(
-          {
-            userId: null,
-            sessionId,
-            status: CART_STATUS.ACTIVE,
-            expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          },
-          { transaction: t },
-        );
+        console.log('AddToCart - Creating new cart for guest session:', sessionId);
+        try {
+          cart = await Cart.create(
+            {
+              userId: null, // Explicitly set to null
+              sessionId,
+              status: CART_STATUS.ACTIVE,
+              expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            },
+            { transaction: t },
+          );
+          console.log('AddToCart - New guest cart created:', cart.id);
+        } catch (cartError) {
+          console.error('Error creating cart for guest:', cartError);
+          throw cartError;
+        }
       }
     }
 
@@ -477,6 +503,8 @@ export const checkout = async (req, res, next) => {
 
     let subtotal = 0;
     const orderItemsDetails = [];
+
+    // Process each item in the cart to determine the correct price
     for (const item of items) {
       const product = productMap.get(item.productId);
       const variant = item.variantId ? variantMap.get(item.variantId) : null;
@@ -487,12 +515,18 @@ export const checkout = async (req, res, next) => {
       const unitPrice = variant ? parseFloat(variant.price || product.price) : parseFloat(product.price);
       if (isNaN(unitPrice)) throw new Error('Invalid price for product');
 
-      subtotal += unitPrice * item.quantity;
+      const itemTotal = unitPrice * item.quantity;
+      subtotal += itemTotal;
+
+      console.log(
+        `Item: ${product.name}, Quantity: ${item.quantity}, Unit Price: ${unitPrice}, Total: ${itemTotal}`,
+      );
+
       orderItemsDetails.push({
         name: product.name,
         quantity: item.quantity,
         unitPrice: unitPrice.toFixed(2),
-        total: (unitPrice * item.quantity).toFixed(2),
+        total: itemTotal.toFixed(2),
       });
     }
 
@@ -513,6 +547,7 @@ export const checkout = async (req, res, next) => {
         subtotal,
         tax,
         deliveryFee,
+        shippingCost: deliveryFee, // Set both for backward compatibility
         discount,
         firstName,
         lastName,
@@ -523,13 +558,14 @@ export const checkout = async (req, res, next) => {
         phone,
         paymentMethod,
         paymentStatus: PAYMENT_STATUS.PENDING,
-        shippingMethod: shippingMethod || null,
+        shippingMethod: shippingMethod || SHIPPING_METHODS.STANDARD,
         email: userEmail,
         processedAt: new Date(),
       },
       { transaction: t },
     );
 
+    // Create order items with consistent pricing and detailed snapshots
     const orderItems = items.map((item) => {
       const product = productMap.get(item.productId);
       const variant = item.variantId ? variantMap.get(item.variantId) : null;
@@ -541,8 +577,9 @@ export const checkout = async (req, res, next) => {
         variantId: item.variantId,
         quantity: item.quantity,
         unitPrice,
-        subtotal: unitPrice * item.quantity,
+        subtotal: itemTotal,
         productSnapshot: {
+          id: product.id,
           name: product.name,
           price: unitPrice,
           image: product.images && product.images.length > 0 ? product.images[0].url : null,
@@ -563,6 +600,7 @@ export const checkout = async (req, res, next) => {
       ),
     );
 
+    // Mark cart as converted after checkout
     await Cart.update(
       { status: CART_STATUS.CONVERTED },
       { where: { id: cart.id }, transaction: t },
@@ -618,11 +656,11 @@ export const checkout = async (req, res, next) => {
     }
 
     const financialSummary = {
-      subtotal: parseFloat(subtotal.toFixed(2)),
-      discount: parseFloat(discount.toFixed(2)),
-      deliveryFee: parseFloat(deliveryFee.toFixed(2)),
-      tax: parseFloat(tax.toFixed(2)),
-      totalAmount: parseFloat(totalAmount.toFixed(2)),
+      subtotal: subtotal,
+      discount: discount,
+      deliveryFee: deliveryFee,
+      tax: tax,
+      totalAmount: totalAmount,
       itemCount: items.length,
     };
 

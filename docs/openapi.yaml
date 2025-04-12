@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
   title: Omorix API
   description: API for the Omorix e-commerce platform, supporting both authenticated and guest users for cart and checkout operations.
@@ -163,39 +163,41 @@ components:
         - city
         - country
         - phone
-    Category:
+    Wishlist:
       type: object
       properties:
         id:
           type: string
           format: uuid
-        name:
-          type: string
-        slug:
-          type: string
-        description:
-          type: string
-          nullable: true
-        parentId:
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        userId:
           type: string
           format: uuid
-          nullable: true
-        image:
+          example: "7c0d7bb0-ae1a-4b7f-8d7f-5e3db1895e19"
+        productId:
           type: string
-          format: uri
-          nullable: true
-          description: URL of the uploaded image after processing
-        isActive:
-          type: boolean
-        displayOrder:
-          type: integer
-          nullable: true
+          format: uuid
+          example: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
+        product:
+          $ref: '#/components/schemas/Product'
         createdAt:
           type: string
           format: date-time
+          example: "2023-11-15T08:30:00Z"
         updatedAt:
           type: string
           format: date-time
+          example: "2023-11-15T08:30:00Z"
+    WishlistAddSchema:
+      type: object
+      properties:
+        productId:
+          type: string
+          format: uuid
+          description: The ID of the product to add to the wishlist
+          example: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
+      required:
+        - productId
     CategoryCreateSchema:
       type: object
       properties:
@@ -547,18 +549,23 @@ components:
         totalAmount:
           type: number
           format: float
-        subtotal:
-          type: number
-          format: float
-        tax:
-          type: number
-          format: float
-        deliveryFee:
-          type: number
-          format: float
-        discount:
-          type: number
-          format: float
+          description: Total order amount in GBP
+          subtotal:
+            type: number
+            format: float
+            description: Subtotal in GBP
+          tax:
+            type: number
+            format: float
+            description: Tax amount in GBP
+          deliveryFee:
+            type: number
+            format: float
+            description: Delivery fee in GBP
+          discount:
+            type: number
+            format: float
+            description: Discount amount in GBP
         firstName:
           type: string
         lastName:
@@ -790,20 +797,23 @@ components:
             subtotal:
               type: number
               format: float
+              description: Amount in GBP
             discount:
               type: number
               format: float
+              description: Amount in GBP
             deliveryFee:
               type: number
               format: float
+              description: Amount in GBP
             tax:
               type: number
               format: float
+              description: Amount in GBP
             totalAmount:
               type: number
               format: float
-            itemCount:
-              type: integer
+              description: Amount in GBP
     PayPalCaptureResponse:
       type: object
       properties:
@@ -870,7 +880,99 @@ components:
                       type: string
                     surname:
                       type: string
-
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        userId:
+          type: string
+          format: uuid
+          example: "7c0d7bb0-ae1a-4b7f-8d7f-5e3db1895e19"
+        productId:
+          type: string
+          format: uuid
+          example: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          example: 4
+        title:
+          type: string
+          example: "Great product!"
+        comment:
+          type: string
+          example: "I really enjoyed using this product. It exceeded my expectations."
+        isVerifiedPurchase:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: "2023-11-15T08:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2023-11-15T08:30:00Z"
+    ReviewCreateSchema:
+      type: object
+      properties:
+        productId:
+          type: string
+          format: uuid
+          description: The ID of the product to review
+          example: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Rating from 1 to 5 stars
+          example: 4
+        title:
+          type: string
+          description: Review title or headline
+          example: "Great product!"
+        comment:
+          type: string
+          description: Detailed review text
+          example: "I really enjoyed using this product. It exceeded my expectations."
+      required:
+        - productId
+        - rating
+    ReviewStatistics:
+      type: object
+      properties:
+        avgRating:
+          type: number
+          format: float
+          example: 4.5
+          description: Average rating of the product
+        totalReviews:
+          type: integer
+          example: 24
+          description: Total number of reviews
+        distribution:
+          type: object
+          properties:
+            "1":
+              type: integer
+              example: 1
+            "2":
+              type: integer
+              example: 2
+            "3":
+              type: integer
+              example: 3
+            "4":
+              type: integer
+              example: 8
+            "5":
+              type: integer
+              example: 10
+          description: Distribution of ratings by star count
 paths:
   /auth/register:
     post:
@@ -1116,6 +1218,43 @@ paths:
                 $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /auth/resend-otp:
+    post:
+      summary: Resend verification OTP
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                  description: The ID of the user to resend the OTP to
+              required:
+                - userId
+      responses:
+        '200':
+          description: OTP resent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid user ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
           content:
             application/json:
               schema:
@@ -1447,6 +1586,57 @@ paths:
           content:
             application/json:
               schema:
+                $ref: '#/components/schemas/Error'     
+  /admin/categories/{subCategoryId}/subsub:
+    post:
+      summary: Create a sub-subcategory
+      tags:
+        - Admin
+        - Categories
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: subCategoryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CategoryCreateSchema'
+      responses:
+        '201':
+          description: Sub-subcategory created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Category'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Parent subcategory not found
+          content:
+            application/json:
+              schema:
                 $ref: '#/components/schemas/Error'
   /categories:
     get:
@@ -1549,6 +1739,101 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /categories/subcategory/{subcategoryId}:
+    get:
+      summary: Get subcategory details
+      tags:
+        - Public
+        - Categories
+      parameters:
+        - name: subcategoryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Subcategory details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Category'
+        '404':
+          description: Subcategory not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /categories/subcategory/{subcategoryId}/subsubcategories:
+    get:
+      summary: Get all subsubcategories under a subcategory
+      tags:
+        - Public
+        - Categories
+      parameters:
+        - name: subcategoryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Subsubcategories retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Category'
+        '404':
+          description: Subcategory not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /categories/subsubcategory/{subSubcategoryId}:
+    get:
+      summary: Get subsubcategory details
+      tags:
+        - Public
+        - Categories
+      parameters:
+        - name: subSubcategoryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Subsubcategory details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Category'
+        '404':
+          description: Subsubcategory not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'             
   /admin/categories/{id}:
     patch:
       summary: Update a category
@@ -1756,71 +2041,71 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
   /admin/products/{productId}/stock:
-  patch:
-    summary: Update product variant stock
-    tags:
-      - Admin
-      - Products
-    security:
-      - bearerAuth: []
-    parameters:
-      - name: productId
-        in: path
-        required: true
-        description: ID of the product to update
-        schema:
-          type: string
-          format: uuid
-      - name: variantId
-        in: query
-        required: true
-        description: ID of the specific product variant to update
-        schema:
-          type: string
-          format: uuid
-    requestBody:
-      required: true
-      content:
-        application/json:
+    patch:
+      summary: Update product variant stock
+      tags:
+        - Admin
+        - Products
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: ID of the product to update
           schema:
-            type: object
-            properties:
-              stockQuantity:
-                type: integer
-                minimum: 0
-                description: The new stock quantity for the specified variant
-            required:
-              - stockQuantity
-    responses:
-      '200':
-        description: Stock updated successfully
+            type: string
+            format: uuid
+        - name: variantId
+          in: query
+          required: true
+          description: ID of the specific product variant to update
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
         content:
           application/json:
             schema:
-              allOf:
-                - $ref: '#/components/schemas/ApiResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/ProductVariant'
-      '400':
-        description: Bad request - Missing or invalid variantId parameter
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Error'
-      '403':
-        description: Forbidden - Admin access required
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Error'
-      '404':
-        description: Product or variant not found
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Error'
+              type: object
+              properties:
+                stockQuantity:
+                  type: integer
+                  minimum: 0
+                  description: The new stock quantity for the specified variant
+              required:
+                - stockQuantity
+      responses:
+        '200':
+          description: Stock updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ProductVariant'
+        '400':
+          description: Bad request - Missing or invalid variantId parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Product or variant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /admin/products/{id}/archive:
     patch:
       summary: Archive a product
@@ -3245,3 +3530,613 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /wishlist:
+    post:
+      summary: Add product to wishlist
+      description: Adds a product to the authenticated user's wishlist.
+      tags:
+        - Wishlist
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WishlistAddSchema'
+            examples:
+              wishlist:
+                summary: Add product to wishlist
+                value:
+                  productId: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
+      responses:
+        '201':
+          description: Product added to wishlist successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Wishlist'
+              examples:
+                success:
+                  summary: Successful response
+                  value:
+                    success: true
+                    message: "Product added to wishlist successfully"
+                    data:
+                      id: "550e8400-e29b-41d4-a716-446655440000"
+                      userId: "7c0d7bb0-ae1a-4b7f-8d7f-5e3db1895e19"
+                      productId: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
+                      createdAt: "2023-11-15T08:30:00Z"
+                      updatedAt: "2023-11-15T08:30:00Z"
+                    statusCode: 201
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      summary: Get user's wishlist
+      description: Retrieves all products in the authenticated user's wishlist.
+      tags:
+        - Wishlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Wishlist retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          wishlist:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Wishlist'
+                          pagination:
+                            type: object
+                            properties:
+                              limit:
+                                type: integer
+                              offset:
+                                type: integer
+                              total:
+                                type: integer
+              examples:
+                success:
+                  summary: Successful response
+                  value:
+                    success: true
+                    message: "Wishlist retrieved successfully"
+                    data:
+                      wishlist:
+                        - id: "550e8400-e29b-41d4-a716-446655440000"
+                          userId: "7c0d7bb0-ae1a-4b7f-8d7f-5e3db1895e19"
+                          productId: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
+                          product:
+                            id: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
+                            name: "Stylish T-Shirt"
+                            price: 29.99
+                            images:
+                              - id: "img-123"
+                                displayOrder: 0
+                                isDefault: true
+                                imageUrl: "https://example.com/api/products/images/img-123"
+                            featuredImageUrl: "https://example.com/api/products/images/img-123"
+                          createdAt: "2023-11-15T08:30:00Z"
+                          updatedAt: "2023-11-15T08:30:00Z"
+                      pagination:
+                        limit: 10
+                        offset: 0
+                        total: 1
+                    statusCode: 200
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Clear wishlist
+      description: Removes all products from the authenticated user's wishlist.
+      tags:
+        - Wishlist
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Wishlist cleared successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                success:
+                  summary: Successful response
+                  value:
+                    success: true
+                    message: "Wishlist cleared successfully"
+                    data: null
+                    statusCode: 204
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /wishlist/check/{productId}:
+    get:
+      summary: Check wishlist status
+      description: Checks if a product is in the authenticated user's wishlist.
+      tags:
+        - Wishlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the product to check
+          example: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
+      responses:
+        '200':
+          description: Wishlist status retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          inWishlist:
+                            type: boolean
+                            description: Whether the product is in the user's wishlist
+              examples:
+                inWishlist:
+                  summary: Product is in wishlist
+                  value:
+                    success: true
+                    message: "Wishlist status retrieved"
+                    data:
+                      inWishlist: true
+                    statusCode: 200
+                notInWishlist:
+                  summary: Product is not in wishlist
+                  value:
+                    success: true
+                    message: "Wishlist status retrieved"
+                    data:
+                      inWishlist: false
+                    statusCode: 200
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /wishlist/{productId}:
+    delete:
+      summary: Remove product from wishlist
+      description: Removes a specific product from the authenticated user's wishlist.
+      tags:
+        - Wishlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the product to remove from wishlist
+          example: "3a7bd1d8-51d1-4d49-b49e-4a0f7c98538f"
+      responses:
+        '204':
+          description: Product removed from wishlist successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                success:
+                  summary: Successful response
+                  value:
+                    success: true
+                    message: "Product removed from wishlist successfully"
+                    data: null
+                    statusCode: 204
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Product not found in wishlist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /reviews:
+    post:
+      summary: Add or update a product review
+      description: Allows authenticated users to create or update their review for a product they have purchased
+      tags:
+        - Reviews
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreateSchema'
+      responses:
+        '201':
+          description: Review created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Review'
+        '200':
+          description: Review updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Review'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - User has not purchased this product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /products/{productId}/reviews:
+    get:
+      summary: Get all reviews for a product
+      tags:
+        - Reviews
+        - Products
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the product to get reviews for
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: ['newest', 'highest', 'lowest']
+            default: 'newest'
+      responses:
+        '200':
+          description: Reviews retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          reviews:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Review'
+                          pagination:
+                            type: object
+                            properties:
+                              limit:
+                                type: integer
+                              offset:
+                                type: integer
+                              total:
+                                type: integer
+                          stats:
+                            $ref: '#/components/schemas/ReviewStatistics'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /products/{productId}/review-stats:
+    get:
+      summary: Get review statistics for a product
+      tags:
+        - Reviews
+        - Products
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the product to get review statistics for
+      responses:
+        '200':
+          description: Review statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ReviewStatistics'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /products/{productId}/my-review:
+    get:
+      summary: Get the authenticated user's review for a product
+      tags:
+        - Reviews
+        - Products
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the product to get the user's review for
+      responses:
+        '200':
+          description: Review retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Review'
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Review not found - User has not reviewed this product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /reviews/{reviewId}:
+    delete:
+      summary: Delete a review
+      tags:
+        - Reviews
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the review to delete
+      responses:
+        '200':
+          description: Review deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - User can only delete their own reviews
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Review not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/reviews:
+    get:
+      summary: Get all reviews (admin only)
+      tags:
+        - Admin
+        - Reviews
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: ['newest', 'oldest', 'highest', 'lowest']
+            default: 'newest'
+      responses:
+        '200':
+          description: Reviews retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          reviews:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Review'
+                          pagination:
+                            type: object
+                            properties:
+                              limit:
+                                type: integer
+                              offset:
+                                type: integer
+                              total:
+                                type: integer
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/reviews/{reviewId}:
+    delete:
+      summary: Delete a review (admin only)
+      tags:
+        - Admin
+        - Reviews
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the review to delete
+      responses:
+        '200':
+          description: Review deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized - User must be authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Review not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'                
+
