@@ -213,45 +213,91 @@ export const addToCart = async (req, res, next) => {
       throw new Error('Quantity must be positive');
     }
 
+    // Log complete authentication info for debugging
+    console.log('AddToCart - Auth info:', {
+      hasUser: !!req.user,
+      userId: req.user?.id,
+      sessionId: req.session?.id,
+    });
+
     let cart;
+    // For authenticated users with a valid user ID
     if (req.user && req.user.id) {
       console.log('AddToCart - Authenticated user:', req.user.id);
+
+      // First try to find an existing cart
       cart = await Cart.findOne({
-        where: { userId: req.user.id, status: CART_STATUS.ACTIVE },
+        where: {
+          userId: req.user.id,
+          status: CART_STATUS.ACTIVE,
+        },
         order: [['createdAt', 'ASC']],
         transaction: t,
       });
+
+      // If no cart exists, create a new one
       if (!cart) {
-        cart = await Cart.create(
-          {
-            userId: req.user.id,
-            sessionId: null,
-            status: CART_STATUS.ACTIVE,
-            expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          },
-          { transaction: t },
-        );
+        console.log('AddToCart - Creating new cart for user:', req.user.id);
+        try {
+          cart = await Cart.create(
+            {
+              userId: req.user.id,
+              sessionId: null,
+              status: CART_STATUS.ACTIVE,
+              expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            },
+            { transaction: t },
+          );
+          console.log('AddToCart - New cart created:', cart.id);
+        } catch (cartError) {
+          console.error('Error creating cart for authenticated user:', cartError);
+          throw cartError;
+        }
       }
-    } else {
+    }
+    // For guest users
+    else {
       console.log('AddToCart - Guest user detected');
-      const sessionId = req.session?.id || 'guest-session';
-      console.log('AddToCart - Session ID:', sessionId);
+
+      // Create a reliable session ID even if req.session is not set
+      const sessionId =
+        req.session?.id || `guest-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+      console.log('AddToCart - Using Session ID:', sessionId);
+
+      // First try to find an existing guest cart
       cart = await Cart.findOne({
-        where: { sessionId, status: CART_STATUS.ACTIVE },
+        where: {
+          sessionId,
+          userId: null, // Explicitly look for null userId
+          status: CART_STATUS.ACTIVE,
+        },
         order: [['createdAt', 'ASC']],
         transaction: t,
       });
+
+      // If no cart exists, create a new one
       if (!cart) {
-        cart = await Cart.create(
-          {
-            userId: null,
-            sessionId,
-            status: CART_STATUS.ACTIVE,
-            expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          },
-          { transaction: t },
-        );
+        console.log('AddToCart - Creating new cart for guest session:', sessionId);
+        try {
+          cart = await Cart.create(
+            {
+              userId: null, // Explicitly set to null
+              sessionId,
+              status: CART_STATUS.ACTIVE,
+              expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            },
+            { transaction: t },
+          );
+          console.log('AddToCart - New guest cart created:', cart.id);
+        } catch (cartError) {
+          console.error('Error creating cart for guest:', cartError);
+          throw cartError;
+        }
       }
+    }
+
+    if (!cart) {
+      throw new Error('Failed to create or retrieve cart');
     }
 
     console.log('AddToCart - Cart ID:', cart.id);
@@ -395,7 +441,6 @@ export const removeFromCart = async (req, res, next) => {
   }
 };
 // UPDATED CHECKOUT FUNCTION WITH PAYPAL PAYMENT INTEGRATION
-
 export const checkout = async (req, res, next) => {
   const {
     firstName,
@@ -407,7 +452,7 @@ export const checkout = async (req, res, next) => {
     postCode,
     country,
     paymentMethod: rawPaymentMethod,
-    shippingMethod, // Optional, defaults to 0 cost if not provided
+    shippingMethod, // Optional, defaults to STANDARD if not provided
     taxRate, // Optional, defaults to 0 if not provided
   } = req.body;
 
@@ -481,66 +526,102 @@ export const checkout = async (req, res, next) => {
 
     console.log('Checkout - Cart found:', cart.id);
 
-    const items = await CartItem.findAll({ where: { cartId: cart.id }, transaction: t });
+    // IMPORTANT FIX: Include proper associations when fetching cart items
+    const items = await CartItem.findAll({
+      where: { cartId: cart.id },
+      include: [
+        {
+          model: Product,
+          as: 'product',
+          attributes: ['id', 'name', 'price', 'featuredImage'],
+        },
+        {
+          model: ProductVariant,
+          as: 'variant',
+          attributes: ['id', 'size', 'color', 'price'],
+        },
+      ],
+      transaction: t,
+    });
+
     if (!items.length) throw new Error(ERROR_MESSAGES.CART_EMPTY);
 
     console.log('Checkout - Cart items:', items.length);
 
-    const productIds = items.map((item) => item.productId);
-    const variantIds = items.map((item) => item.variantId).filter(Boolean);
-    const [products, variants] = await Promise.all([
-      Product.findAll({ where: { id: productIds }, transaction: t }),
-      ProductVariant.findAll({ where: { id: variantIds }, transaction: t }),
-    ]);
-
-    const productMap = new Map(products.map((product) => [product.id, product]));
-    const variantMap = new Map(variants.map((variant) => [variant.id, variant]));
-
+    // CRITICAL FIX: Calculate subtotal properly based on cart items
     let subtotal = 0;
     const orderItemsDetails = [];
-    for (const item of items) {
-      const product = productMap.get(item.productId);
-      const variant = item.variantId ? variantMap.get(item.variantId) : null;
-      if (!product || product.stockQuantity < item.quantity)
-        throw new Error(ERROR_MESSAGES.PRODUCT_INSUFFICIENT_STOCK);
 
+    // Process each item in the cart to determine the correct price
+    for (const item of items) {
+      const product = item.product;
+      const variant = item.variant;
+
+      // Determine the correct unit price (variant price or product price)
+      let unitPrice;
+
+      if (variant && variant.price !== null && variant.price !== undefined) {
+        unitPrice = parseFloat(variant.price);
+        console.log(unitPrice);
+      } else {
+        unitPrice = parseFloat(product.price);
+        console.log(unitPrice);
+      }
+
+      // Log for debugging
       console.log(
-        `Product ID: ${item.productId}, Product Price: ${product.price}, Variant Price: ${variant?.price}`,
+        `Item ${product.name}: Product price = ${product.price}, Variant price = ${variant?.price}, Using price = ${unitPrice}`,
       );
 
-      const unitPriceRaw = variant ? variant.price || product.price : product.price;
-      const unitPrice = parseFloat(unitPriceRaw) || 0;
-
-      if (isNaN(unitPrice)) {
-        console.error(`Invalid unitPrice for product ID ${item.productId}: ${unitPriceRaw}`);
+      if (isNaN(unitPrice) || unitPrice <= 0) {
+        console.error(`Invalid unitPrice for product ID ${item.productId}: ${unitPrice}`);
         throw new Error('Invalid price for product');
       }
 
-      subtotal += unitPrice * item.quantity;
+      const itemTotal = unitPrice * item.quantity;
+      subtotal += itemTotal;
+
+      console.log(
+        `Item: ${product.name}, Quantity: ${item.quantity}, Unit Price: ${unitPrice}, Total: ${itemTotal}`,
+      );
+
       orderItemsDetails.push({
         name: product.name,
         quantity: item.quantity,
         unitPrice: unitPrice.toFixed(2),
-        total: (unitPrice * item.quantity).toFixed(2),
+        total: itemTotal.toFixed(2),
       });
     }
 
-    // Calculate delivery fee based on shippingMethod
-    const deliveryFee =
-      shippingMethod && SHIPPING_FEES[shippingMethod] !== undefined
-        ? parseFloat(SHIPPING_FEES[shippingMethod])
-        : 0.0;
+    // FIXED: Set delivery fee to 0 instead of using constants
+    // const deliveryFee =
+    //   shippingMethod && SHIPPING_FEES[shippingMethod] !== undefined
+    //     ? parseFloat(SHIPPING_FEES[shippingMethod])
+    //     : parseFloat(SHIPPING_FEES[SHIPPING_METHODS.STANDARD] || 0);
+
+    // Override with 0 delivery fee
+    const deliveryFee = 0.0;
 
     // No coupon system, so discount is always 0
     const discount = 0.0;
 
     // Calculate tax based on taxRate
-    const tax = taxRate && taxRate > 0 ? subtotal * (taxRate / 100) : 0.0;
+    const tax = taxRate && taxRate > 0 ? parseFloat((subtotal * (taxRate / 100)).toFixed(2)) : 0.0;
 
-    const totalAmount = subtotal - discount + deliveryFee + tax;
+    // Calculate total with all values as parsed floats to avoid string concatenation issues
+    const totalAmount = parseFloat((subtotal - discount + deliveryFee + tax).toFixed(2));
+
+    console.log('Order Financial Breakdown:', {
+      subtotal,
+      discount,
+      deliveryFee,
+      tax,
+      totalAmount,
+    });
+
     const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
-    // Create the order in the database
+    // Create the order in the database with consistent financial values
     const order = await Order.create(
       {
         userId: req.user?.id || null,
@@ -550,6 +631,7 @@ export const checkout = async (req, res, next) => {
         subtotal,
         tax,
         deliveryFee,
+        shippingCost: deliveryFee, // Set both for backward compatibility
         discount,
         firstName,
         lastName,
@@ -560,18 +642,27 @@ export const checkout = async (req, res, next) => {
         phone,
         paymentMethod,
         paymentStatus: PAYMENT_STATUS.PENDING,
-        shippingMethod: shippingMethod || null,
+        shippingMethod: shippingMethod || SHIPPING_METHODS.STANDARD,
         email: userEmail,
         processedAt: new Date(),
       },
       { transaction: t },
     );
 
+    // Create order items with consistent pricing and detailed snapshots
     const orderItems = items.map((item) => {
-      const product = productMap.get(item.productId);
-      const variant = item.variantId ? variantMap.get(item.variantId) : null;
-      const unitPriceRaw = variant ? variant.price || product.price : product.price;
-      const unitPrice = parseFloat(unitPriceRaw) || 0;
+      const product = item.product;
+      const variant = item.variant;
+
+      // FIXED: Properly determine the unit price
+      let unitPrice;
+      if (variant && variant.price !== null && variant.price !== undefined) {
+        unitPrice = parseFloat(variant.price);
+      } else {
+        unitPrice = parseFloat(product.price);
+      }
+
+      const itemTotal = parseFloat((unitPrice * item.quantity).toFixed(2));
 
       return {
         orderId: order.id,
@@ -579,27 +670,44 @@ export const checkout = async (req, res, next) => {
         variantId: item.variantId,
         quantity: item.quantity,
         unitPrice,
-        subtotal: unitPrice * item.quantity,
+        subtotal: itemTotal,
         productSnapshot: {
+          id: product.id,
           name: product.name,
           price: unitPrice,
-          image: product.images && product.images.length > 0 ? product.images[0].url : null,
-          variant: variant ? { size: variant.size, color: variant.color } : null,
+          featuredImage: product.featuredImage,
+          variant: variant
+            ? {
+                id: variant.id,
+                size: variant.size,
+                color: variant.color,
+                price: variant.price ? parseFloat(variant.price) : null,
+              }
+            : null,
         },
       };
     });
 
     await OrderItem.bulkCreate(orderItems, { transaction: t });
 
+    // Update stock quantities
     await Promise.all(
-      items.map(({ productId, variantId, quantity }) =>
-        (variantId ? ProductVariant : Product).update(
-          { stockQuantity: sequelize.literal(`"stockQuantity" - ${quantity}`) },
-          { where: { id: variantId || productId }, transaction: t },
-        ),
-      ),
+      items.map(async (item) => {
+        if (item.variantId) {
+          await ProductVariant.update(
+            { stockQuantity: sequelize.literal(`"stockQuantity" - ${item.quantity}`) },
+            { where: { id: item.variantId }, transaction: t },
+          );
+        } else {
+          await Product.update(
+            { stockQuantity: sequelize.literal(`"stockQuantity" - ${item.quantity}`) },
+            { where: { id: item.productId }, transaction: t },
+          );
+        }
+      }),
     );
 
+    // Mark cart as converted after checkout
     await Cart.update(
       { status: CART_STATUS.CONVERTED },
       { where: { id: cart.id }, transaction: t },
@@ -657,14 +765,25 @@ export const checkout = async (req, res, next) => {
     }
 
     // Prepare the financial summary for the response
+    // const financialSummary = {
+    //   subtotal: parseFloat(subtotal.toFixed(2)),
+    //   discount: parseFloat(discount.toFixed(2)),
+    //   deliveryFee: parseFloat(deliveryFee.toFixed(2)),
+    //   tax: parseFloat(tax.toFixed(2)),
+    //   totalAmount: parseFloat(totalAmount.toFixed(2)),
+    //   itemCount: items.length,
+    // };
+
     const financialSummary = {
-      subtotal: parseFloat(subtotal.toFixed(2)),
-      discount: parseFloat(discount.toFixed(2)),
-      deliveryFee: parseFloat(deliveryFee.toFixed(2)),
-      tax: parseFloat(tax.toFixed(2)),
-      totalAmount: parseFloat(totalAmount.toFixed(2)),
+      subtotal: subtotal,
+      discount: discount,
+      deliveryFee: deliveryFee,
+      tax: tax,
+      totalAmount: totalAmount,
       itemCount: items.length,
     };
+
+    console.log(financialSummary);
 
     // Return response based on payment method
     if (paymentMethod === PAYMENT_METHODS.PAYPAL && paypalOrderData) {
