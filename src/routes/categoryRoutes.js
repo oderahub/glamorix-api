@@ -3,6 +3,9 @@ import { authenticateToken, requireRole } from '../utils/authMiddleware.js';
 import {
   getAllCategories,
   getCategoryDetails,
+  getSubcategoryDetails,
+  getSubSubcategories,
+  getSubSubcategoryDetails,
   createMainCategory,
   createSubCategory,
   createSubSubCategory,
@@ -17,9 +20,15 @@ import { uploadCategoryImage } from '../middlewares/authValidate.js';
 
 const router = express.Router();
 
+// Public routes
 router.get('/categories', getAllCategories);
 router.get('/categories/:id', getCategoryDetails);
+router.get('/categories/subcategory/:subcategoryId', getSubcategoryDetails);
+router.get('/categories/subcategory/:subcategoryId/subsubcategories', getSubSubcategories);
+router.get('/categories/subsubcategory/:subSubcategoryId', getSubSubcategoryDetails);
 router.get('/categories/images/:id', getCategoryImage);
+
+// Admin routes
 router.post(
   '/admin/categories',
   authenticateToken,
@@ -37,7 +46,7 @@ router.post(
   createSubCategory,
 );
 router.post(
-  '/admin/categories/:subCategoryId/sub',
+  '/admin/categories/:subCategoryId/subsub',
   authenticateToken,
   requireRole(ROLES.ADMIN),
   uploadCategoryImage,
