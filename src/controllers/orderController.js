@@ -1,5 +1,6 @@
 import sequelize from '../config/database.js';
-import { Order, OrderItem, Product, ProductVariant, User } from '../models/index.js';
+import { Order, OrderItem, Product, ProductVariant, User, ProductImage } from '../models/index.js';
+// import transformOrderImages from '../utils/transformOrderImages.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import {
   HTTP_STATUS_CODES,
@@ -8,18 +9,42 @@ import {
   SHIPPING_METHODS,
 } from '../constants/constant.js';
 
-import { calculateFinancialSummary, formatOrderItem } from '../utils/calculateFinancialSummary.js';
-import { generateOrderNumber } from '../utils/orderUtils.js';
+// Helper function to transform order images
+const transformOrderImages = (req, order) => {
+  if (!order || !order.items) return order;
+
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const transformedOrder = { ...order.toJSON() };
+
+  transformedOrder.items = transformedOrder.items.map((item) => {
+    // Add image URL to the product snapshot if imageId is available
+    if (item.productSnapshot && item.productSnapshot.imageId) {
+      item.productSnapshot.imageUrl = `${baseUrl}/api/products/images/${item.productSnapshot.imageId}`;
+    }
+
+    // If the item has a productImage relation, use that for the URL
+    if (item.productImage) {
+      item.imageUrl = `${baseUrl}/api/products/images/${item.productImage.id}`;
+
+      // Clean up by removing base64 data if present
+      delete item.productImage.imageData;
+    }
+
+    return item;
+  });
+
+  return transformedOrder;
+};
 
 // Centralized utility function for order number generation
-// const generateOrderNumber = () => {
-//   const prefix = 'ORD';
-//   const timestamp = Date.now().toString().substring(4);
-//   const random = Math.floor(Math.random() * 1000)
-//     .toString()
-//     .padStart(3, '0');
-//   return `${prefix}-${timestamp}-${random}`;
-// };
+const generateOrderNumber = () => {
+  const prefix = 'ORD';
+  const timestamp = Date.now().toString().substring(4);
+  const random = Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, '0');
+  return `${prefix}-${timestamp}-${random}`;
+};
 
 // export const placeOrder = async (req, res, next) => {
 //   const {
@@ -159,173 +184,225 @@ import { generateOrderNumber } from '../utils/orderUtils.js';
 export const placeOrder = async (req, res, next) => {
   const {
     items,
-    firstName,
-    lastName,
-    phone,
-    email,
-    deliveryAddress,
-    city,
-    postCode,
-    country,
-    paymentMethod,
+    shippingFirstName,
+    shippingLastName,
+    shippingAddress,
+    shippingCity,
+    shippingZip,
+    shippingPhone,
     shippingMethod,
-    taxRate = 0,
+    email,
+    paymentMethod,
   } = req.body;
 
   let t;
   try {
     t = await sequelize.transaction();
 
-    // Validate items and gather product information
-    const productItems = [];
-    const productIds = items.map((item) => item.productId);
-    const variantIds = items.filter((item) => item.variantId).map((item) => item.variantId);
-
-    // Fetch all products and variants in bulk to optimize DB queries
-    const [products, variants] = await Promise.all([
-      Product.findAll({ where: { id: productIds }, transaction: t }),
-      ProductVariant.findAll({ where: { id: variantIds }, transaction: t }),
-    ]);
-
-    const productMap = new Map(products.map((product) => [product.id, product]));
-    const variantMap = new Map(variants.map((variant) => [variant.id, variant]));
-
-    // Process each item, validate stock, and prepare for order creation
+    // Calculate totals and validate items
+    let subtotal = 0;
     for (const item of items) {
-      const product = productMap.get(item.productId);
+      const product = await Product.findByPk(item.productId, { transaction: t });
       if (!product) {
         throw new Error(ERROR_MESSAGES.PRODUCT_NOT_FOUND);
       }
-
-      let variant = null;
       if (item.variantId) {
-        variant = variantMap.get(item.variantId);
+        const variant = await ProductVariant.findByPk(item.variantId, { transaction: t });
         if (!variant || variant.productId !== item.productId) {
           throw new Error(ERROR_MESSAGES.PRODUCT_VARIANT_NOT_FOUND);
         }
         if (variant.stockQuantity < item.quantity) {
-          throw new Error(`Insufficient stock for product ${product.name}`);
+          throw new Error(ERROR_MESSAGES.PRODUCT_INSUFFICIENT_STOCK);
         }
+        subtotal += (variant.price || product.price) * item.quantity;
       } else {
         if (product.stockQuantity < item.quantity) {
-          throw new Error(`Insufficient stock for product ${product.name}`);
+          throw new Error(ERROR_MESSAGES.PRODUCT_INSUFFICIENT_STOCK);
         }
+        subtotal += product.price * item.quantity;
       }
-
-      const unitPrice = variant
-        ? parseFloat(variant.price || product.price)
-        : parseFloat(product.price);
-
-      productItems.push({
-        item,
-        product,
-        variant,
-        unitPrice,
-      });
     }
 
-    // Calculate financial summary using the shared utility
-    const orderItems = productItems.map(({ item, product, variant, unitPrice }) => ({
-      productId: item.productId,
-      variantId: item.variantId,
-      quantity: item.quantity,
-      unitPrice,
-    }));
+    // Placeholder for tax and shipping cost
+    const tax = 0.0; // Example: Add tax calculation logic
+    const shippingCost = shippingMethod === SHIPPING_METHODS.FREE_SHIPPING ? 0.0 : 10.0;
+    const discount = 0.0;
+    const totalAmount = subtotal + tax + shippingCost - discount;
 
-    const financialSummary = calculateFinancialSummary(orderItems, {
-      shippingMethod,
-      taxRate,
-      discount: 0,
-      applyShipping: true,
-    });
-
-    // Create the order
-    const orderNumber = generateOrderNumber();
+    // Create order with generated order number
     const order = await Order.create(
       {
-        userId: req.user?.id || null,
-        orderNumber,
+        userId: req.user.id,
+        orderNumber: generateOrderNumber(),
         status: ORDER_STATUS.PENDING,
-        totalAmount: financialSummary.totalAmount,
-        subtotal: financialSummary.subtotal,
-        tax: financialSummary.tax,
-        deliveryFee: financialSummary.deliveryFee, // Using consistent field name
-        discount: financialSummary.discount,
-        firstName,
-        lastName,
-        deliveryAddress,
-        city,
-        postCode,
-        country,
-        phone,
-        email:
-          email || (req.user ? (await User.findByPk(req.user.id, { transaction: t })).email : null),
-        paymentMethod: paymentMethod || PAYMENT_METHODS.PAYPAL,
-        paymentStatus: PAYMENT_STATUS.PENDING,
-        shippingMethod: shippingMethod || SHIPPING_METHODS.STANDARD,
-        processedAt: new Date(),
+        totalAmount,
+        subtotal,
+        tax,
+        shippingCost,
+        discount,
+        shippingFirstName,
+        shippingLastName,
+        shippingAddress,
+        shippingCity,
+        shippingZip,
+        shippingPhone,
+        shippingMethod,
+        email: email || (await User.findByPk(req.user.id)).email,
+        paymentMethod,
       },
       { transaction: t },
     );
 
     // Create order items and update stock
-    const formattedOrderItems = productItems.map(({ item, product, variant, unitPrice }) => {
-      return {
-        orderId: order.id,
-        productId: item.productId,
-        variantId: item.variantId || null,
-        quantity: item.quantity,
-        unitPrice,
-        subtotal: unitPrice * item.quantity,
-        productSnapshot: {
+    //     const orderItems = await Promise.all(
+    //       items.map(async (item) => {
+    //         const product = await Product.findByPk(item.productId, { transaction: t });
+    //         const variant = item.variantId
+    //           ? await ProductVariant.findByPk(item.variantId, { transaction: t })
+    //           : null;
+    //         const unitPrice = variant ? variant.price || product.price : product.price;
+    //         const itemSubtotal = unitPrice * item.quantity;
+    //         const snapshot = {
+    //           name: product.name,
+    //           price: unitPrice,
+    //           variant: variant ? { size: variant.size, color: variant.color } : null,
+    //         };
+
+    //         if (variant) {
+    //           await ProductVariant.update(
+    //             { stockQuantity: variant.stockQuantity - item.quantity },
+    //             { where: { id: variant.id }, transaction: t },
+    //           );
+    //         } else {
+    //           await Product.update(
+    //             { stockQuantity: product.stockQuantity - item.quantity },
+    //             { where: { id: product.id }, transaction: t },
+    //           );
+    //         }
+
+    //         return {
+    //           orderId: order.id,
+    //           productId: item.productId,
+    //           variantId: item.variantId,
+    //           quantity: item.quantity,
+    //           unitPrice,
+    //           subtotal: itemSubtotal,
+    //           discount: 0.0,
+    //           productSnapshot: snapshot,
+    //         };
+    //       }),
+    //     );
+
+    //     await OrderItem.bulkCreate(orderItems, { transaction: t });
+
+    //     await t.commit();
+    //     t = null;
+
+    //     const createdOrder = await Order.findByPk(order.id, {
+    //       include: [{ model: OrderItem, as: 'items' }],
+    //     });
+
+    //     return ApiResponse.success(
+    //       res,
+    //       'Order placed successfully',
+    //       createdOrder,
+    //       HTTP_STATUS_CODES.CREATED,
+    //     );
+    //   } catch (error) {
+    //     // Only roll back if transaction exists and hasn't been committed
+    //     if (t) await t.rollback();
+    //     next(error);
+    //   }
+
+    // Create order items and update stock
+    const orderItems = await Promise.all(
+      items.map(async (item) => {
+        const product = await Product.findByPk(item.productId, {
+          transaction: t,
+          include: [
+            {
+              model: ProductImage,
+              as: 'images',
+              where: { isDefault: true },
+              required: false,
+              limit: 1,
+            },
+          ],
+        });
+
+        const variant = item.variantId
+          ? await ProductVariant.findByPk(item.variantId, { transaction: t })
+          : null;
+
+        const unitPrice = variant ? variant.price || product.price : product.price;
+        const itemSubtotal = unitPrice * item.quantity;
+
+        // Include image information in the product snapshot
+        const defaultImage = product.images && product.images.length > 0 ? product.images[0] : null;
+
+        const snapshot = {
           name: product.name,
           price: unitPrice,
-          image:
-            product.featuredImage ||
-            (product.images && product.images.length > 0 ? product.images[0].url : null),
           variant: variant ? { size: variant.size, color: variant.color } : null,
-        },
-      };
-    });
+          imageId: defaultImage ? defaultImage.id : null,
+        };
 
-    await OrderItem.bulkCreate(formattedOrderItems, { transaction: t });
-
-    // Update product stock
-    await Promise.all(
-      productItems.map(async ({ item, product, variant }) => {
         if (variant) {
           await ProductVariant.update(
-            { stockQuantity: sequelize.literal(`"stockQuantity" - ${item.quantity}`) },
+            { stockQuantity: variant.stockQuantity - item.quantity },
             { where: { id: variant.id }, transaction: t },
+          );
+        } else {
+          await Product.update(
+            { stockQuantity: product.stockQuantity - item.quantity },
+            { where: { id: product.id }, transaction: t },
           );
         }
 
-        // Always update product stock centrally
-        await Product.update(
-          { stockQuantity: sequelize.literal(`"stockQuantity" - ${item.quantity}`) },
-          { where: { id: product.id }, transaction: t },
-        );
+        return {
+          orderId: order.id,
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+          unitPrice,
+          subtotal: itemSubtotal,
+          discount: 0.0,
+          productSnapshot: snapshot,
+        };
       }),
     );
+
+    await OrderItem.bulkCreate(orderItems, { transaction: t });
 
     await t.commit();
     t = null;
 
-    // Fetch the complete order with items for response
     const createdOrder = await Order.findByPk(order.id, {
-      include: [{ model: OrderItem, as: 'items' }],
+      include: [
+        {
+          model: OrderItem,
+          as: 'items',
+          include: [
+            {
+              model: ProductImage,
+              as: 'productImage',
+              attributes: ['id', 'isDefault', 'mimeType'],
+              where: { isDefault: true },
+              required: false,
+              limit: 1,
+            },
+          ],
+        },
+      ],
     });
 
-    // Include the same financial summary format as in checkout
+    // Transform the order to include image URLs
+    const transformedOrder = transformOrderImages(req, createdOrder);
+
     return ApiResponse.success(
       res,
       'Order placed successfully',
-      {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        order: createdOrder,
-        summary: financialSummary,
-      },
+      transformedOrder,
       HTTP_STATUS_CODES.CREATED,
     );
   } catch (error) {
@@ -350,32 +427,73 @@ export const placeOrder = async (req, res, next) => {
 //   }
 // };
 
-// new gerOrderDetails
+// Updated getOrderDetails to include product images
+// export const getOrderDetails = async (req, res, next) => {
+//   try {
+//     const order = await Order.findOne({
+//       where: { id: req.params.orderId, userId: req.user.id },
+//       include: [
+//         {
+//           model: OrderItem,
+//           as: 'items',
+//           include: [
+//             {
+//               model: ProductImage,
+//               as: 'productImage',
+//               attributes: ['id', 'isDefault', 'mimeType'],
+//               where: { isDefault: true },
+//               required: false,
+//               limit: 1,
+//             },
+//           ],
+//         },
+//       ],
+//     });
+
+//     if (!order) {
+//       return ApiResponse.error(res, ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
+//     }
+
+//     // Transform the order to include image URLs
+//     const transformedOrder = transformOrderImages(req, order);
+
+//     return ApiResponse.success(res, 'Order details retrieved', transformedOrder);
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+// Updated getOrderDetails to include product images
 export const getOrderDetails = async (req, res, next) => {
   try {
     const order = await Order.findOne({
       where: { id: req.params.orderId, userId: req.user.id },
-      include: [{ model: OrderItem, as: 'items' }],
+      include: [
+        {
+          model: OrderItem,
+          as: 'items',
+          include: [
+            {
+              model: ProductImage,
+              as: 'productImage',
+              attributes: ['id', 'isDefault', 'mimeType'],
+              where: { isDefault: true },
+              required: false,
+              // Remove the limit parameter since it's not supported for belongsTo
+            },
+          ],
+        },
+      ],
     });
 
     if (!order) {
       return ApiResponse.error(res, ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
     }
 
-    // Include consistent financial summary
-    const financialSummary = {
-      subtotal: parseFloat(order.subtotal),
-      discount: parseFloat(order.discount || 0),
-      deliveryFee: parseFloat(order.deliveryFee || 0),
-      tax: parseFloat(order.tax || 0),
-      totalAmount: parseFloat(order.totalAmount),
-      itemCount: order.items.length,
-    };
+    // Transform the order to include image URLs
+    const transformedOrder = transformOrderImages(req, order);
 
-    return ApiResponse.success(res, 'Order details retrieved', {
-      order,
-      summary: financialSummary,
-    });
+    return ApiResponse.success(res, 'Order details retrieved', transformedOrder);
   } catch (error) {
     next(error);
   }
@@ -485,6 +603,8 @@ export const cancelOrder = async (req, res, next) => {
   }
 };
 
+
+// Updated getCustomerOrders to include product images
 export const getCustomerOrders = async (req, res, next) => {
   try {
     const { limit = 10, offset = 0, status, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
@@ -503,14 +623,51 @@ export const getCustomerOrders = async (req, res, next) => {
       order: [[sortBy, sortOrder]],
       include: [{ model: OrderItem, as: 'items' }],
     });
+    // Fetch orders with pagination, filtering, and sorting
+    const orders = await Order.findAndCountAll({
+      where,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [[sortBy, sortOrder]],
+      include: [
+        {
+          model: OrderItem,
+          as: 'items',
+          include: [
+            {
+              model: ProductImage,
+              as: 'productImage',
+              attributes: ['id', 'isDefault', 'mimeType'],
+              where: { isDefault: true },
+              required: false,
+            },
+          ],
+        },
+      ],
+    });
 
     if (!orders.rows.length) {
       return ApiResponse.error(res, ERROR_MESSAGES.NO_ORDERS_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
     }
+    if (!orders.rows.length) {
+      return ApiResponse.error(res, ERROR_MESSAGES.NO_ORDERS_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
+    }
+
+    // Transform each order to include image URLs
+    const transformedOrders = orders.rows.map((order) => transformOrderImages(req, order));
 
     return ApiResponse.success(res, 'Orders retrieved successfully', {
       total: orders.count,
       orders: orders.rows,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
+  } catch (error) {
+    next(error);
+  }
+    return ApiResponse.success(res, 'Orders retrieved successfully', {
+      total: orders.count,
+      orders: transformedOrders,
       limit: parseInt(limit),
       offset: parseInt(offset),
     });

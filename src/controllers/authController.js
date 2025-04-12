@@ -32,93 +32,25 @@ export const register = async (req, res, next) => {
   }
 };
 
-// export const register = async (req, res, next) => {
-//   const { email, password, firstName, lastName, phone, role } = req.body;
-//   const t = await sequelize.transaction();
-//   try {
-//     // Assign role dynamically, defaulting to CUSTOMER if not provided
-//     const userRole = role || ROLES.CUSTOMER;
-
-//     const user = await User.create(
-//       {
-//         email,
-//         password,
-//         role: userRole,
-//       },
-//       { transaction: t },
-//     );
-
-//     await Customer.create({ userId: user.id, firstName, lastName, phone }, { transaction: t });
-//     await t.commit();
-//     const result = await generateAndSendOtp(user.id);
-//     return ApiResponse.success(res, result.message, { userId: user.id }, HTTP_STATUS_CODES.CREATED);
-//   } catch (error) {
-//     await t.rollback();
-//     next(error);
-//   }
-// };
-
-// export const register = async (req, res, next) => {
-//   const { email, password, firstName, lastName, phone, role } = req.body;
-//   const t = await sequelize.transaction();
-
-//   try {
-//     const userRole = role || ROLES.CUSTOMER;
-
-//     const user = await User.create(
-//       {
-//         email,
-//         password,
-//         role: userRole,
-//       },
-//       { transaction: t },
-//     );
-
-//     await Customer.create(
-//       {
-//         userId: user.id,
-//         firstName,
-//         lastName,
-//         phone,
-//       },
-//       { transaction: t },
-//     );
-
-//     // Commit transaction before sending email
-//     await t.commit();
-
-//     try {
-//       const result = await generateAndSendOtp(user.id);
-//       return ApiResponse.success(
-//         res,
-//         result.message,
-//         { userId: user.id },
-//         HTTP_STATUS_CODES.CREATED,
-//       );
-//     } catch (emailError) {
-//       // Email failed but user was created successfully
-//       console.error('OTP email failed:', emailError);
-//       return ApiResponse.success(
-//         res,
-//         'User created but OTP email failed',
-//         { userId: user.id },
-//         HTTP_STATUS_CODES.CREATED,
-//       );
-//     }
-//   } catch (error) {
-//     // Only rollback if transaction hasn't been committed
-//     if (!t.finished) {
-//       await t.rollback();
-//     }
-//     next(error);
-//   }
-// };
-
 export const verifyOtpHandler = async (req, res, next) => {
   const { userId, otp } = req.body;
   try {
     await verifyOtp(userId, otp);
     return ApiResponse.success(res, 'Email verified');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resendOtp = async (req, res, next) => {
+  const { userId } = req.body;
+  try {
+    if (!userId) {
+      return ApiResponse.error(res, ERROR_MESSAGES.INVALID_REQUEST, HTTP_STATUS_CODES.BAD_REQUEST);
+    }
+
+    const result = await generateAndSendOtp(userId);
+    return ApiResponse.success(res, result.message, { userId });
   } catch (error) {
     next(error);
   }
