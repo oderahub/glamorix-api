@@ -20,8 +20,6 @@ import {
   SHIPPING_FEES,
 } from '../constants/constant.js';
 import { sendOrderConfirmationEmail } from '../services/emailService.js';
-import { calculateFinancialSummary, formatOrderItem } from '../utils/calculateFinancialSummary.js';
-import { generateOrderNumber, formatOrderResponse } from '../utils/orderUtils.js';
 
 // Helper function to fetch cart items (unchanged except logging)
 async function getCartItems(cartId) {
@@ -52,148 +50,6 @@ async function getCartItems(cartId) {
   }
 }
 
-// export const getCart = async (req, res, next) => {
-//   try {
-//     let cart;
-//     const cartIdFromParam = req.params.cartId;
-
-//     if (req.user && req.user.id) {
-//       console.log('GetCart - Authenticated user:', req.user.id);
-//       if (cartIdFromParam) {
-//         cart = await Cart.findOne({
-//           where: { id: cartIdFromParam, userId: req.user.id, status: CART_STATUS.ACTIVE },
-//         });
-//         if (!cart) throw new Error('Cart not found or inactive');
-//         console.log('GetCart - Using explicit cartId from param:', cartIdFromParam);
-//       } else {
-//         const activeCarts = await Cart.findAll({
-//           where: { userId: req.user.id, status: CART_STATUS.ACTIVE },
-//           order: [['createdAt', 'ASC']],
-//         });
-//         cart = activeCarts.length
-//           ? activeCarts[0]
-//           : await Cart.create({
-//               userId: req.user.id,
-//               sessionId: null,
-//               status: CART_STATUS.ACTIVE,
-//               expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-//             });
-//       }
-//     } else {
-//       const sessionId = req.session?.id || 'guest-session';
-//       if (cartIdFromParam) {
-//         cart = await Cart.findOne({
-//           where: { id: cartIdFromParam, sessionId, status: CART_STATUS.ACTIVE },
-//         });
-//         if (!cart) throw new Error('Cart not found or inactive');
-//       } else {
-//         const activeCarts = await Cart.findAll({
-//           where: { sessionId, status: CART_STATUS.ACTIVE },
-//           order: [['createdAt', 'ASC']],
-//         });
-//         cart = activeCarts.length
-//           ? activeCarts[0]
-//           : await Cart.create({
-//               userId: null,
-//               sessionId,
-//               status: CART_STATUS.ACTIVE,
-//               expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-//             });
-//       }
-//     }
-
-//     const items = await CartItem.findAll({
-//       where: { cartId: cart.id },
-//       include: [
-//         {
-//           model: Product,
-//           as: 'product',
-//           include: [{ model: ProductVariant, as: 'variants', required: false }],
-//         },
-//       ],
-//     });
-
-//     const formattedItems = items.map((item) => {
-//       const product = item.product;
-//       const variant = item.variantId ? product.variants.find((v) => v.id === item.variantId) : null;
-
-//       return {
-//         id: item.id,
-//         cartId: item.cartId,
-//         productId: item.productId,
-//         variantId: item.variantId,
-//         quantity: item.quantity,
-//         unitPrice: parseFloat(item.unitPrice || product.price),
-//         addedAt: item.addedAt,
-//         createdAt: item.createdAt,
-//         updatedAt: item.updatedAt,
-//         product: {
-//           id: product.id,
-//           name: product.name,
-//           slug: product.slug,
-//           description: product.description,
-//           price: parseFloat(product.price),
-//           discountPercentage: product.discountPercentage || 0,
-//           stockQuantity: product.stockQuantity, // Centralized stock
-//           sku: product.sku,
-//           isActive: product.isActive,
-//           featuredImage: product.featuredImage || null,
-//           createdAt: product.createdAt,
-//           updatedAt: product.updatedAt,
-//           variants: variant
-//             ? [
-//                 {
-//                   id: variant.id,
-//                   productId: variant.productId,
-//                   size: variant.size,
-//                   color: variant.color,
-//                   material: variant.material,
-//                   additionalAttributes: variant.additionalAttributes || null,
-//                   price: parseFloat(variant.price || product.price),
-//                   stockQuantity: null, // Not used, included for compatibility
-//                   sku: variant.sku,
-//                   createdAt: variant.createdAt,
-//                   updatedAt: variant.updatedAt,
-//                 },
-//               ]
-//             : [],
-//         },
-//       };
-//     });
-
-//     const subtotal = formattedItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-//     const discount = 0;
-//     const shipping = 0;
-//     const tax = 0;
-//     const grandTotal = subtotal - discount + shipping + tax;
-
-//     const response = {
-//       cart: {
-//         id: cart.id,
-//         userId: cart.userId,
-//         sessionId: cart.sessionId,
-//         status: cart.status,
-//         expiryDate: cart.expiryDate,
-//       },
-//       items: formattedItems,
-//       summary: {
-//         subtotal: parseFloat(subtotal.toFixed(2)),
-//         discount: parseFloat(discount.toFixed(2)),
-//         shipping: parseFloat(shipping.toFixed(2)),
-//         tax: parseFloat(tax.toFixed(2)),
-//         grandTotal: parseFloat(grandTotal.toFixed(2)),
-//         itemCount: formattedItems.length,
-//       },
-//     };
-
-//     return ApiResponse.success(res, 'Cart retrieved successfully', response);
-//   } catch (error) {
-//     console.error('Error in getCart:', error.message, error.stack);
-//     next(error);
-//   }
-// };
-
-//updated getCart function with improved error handling and logging
 export const getCart = async (req, res, next) => {
   try {
     let cart;
@@ -303,21 +159,11 @@ export const getCart = async (req, res, next) => {
       };
     });
 
-    // Use the common financial calculation utility
-    const cartItems = formattedItems.map((item) => ({
-      productId: item.productId,
-      variantId: item.variantId,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-    }));
-
-    // Calculate financial summary with zero delivery fee
-    const financialSummary = calculateFinancialSummary(cartItems, {
-      discount: 0,
-      deliveryFee: 0,
-      tax: 0,
-      applyShipping: false,
-    });
+    const subtotal = formattedItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+    const discount = 0;
+    const shipping = 0;
+    const tax = 0;
+    const grandTotal = subtotal - discount + shipping + tax;
 
     const response = {
       cart: {
@@ -328,7 +174,14 @@ export const getCart = async (req, res, next) => {
         expiryDate: cart.expiryDate,
       },
       items: formattedItems,
-      summary: financialSummary,
+      summary: {
+        subtotal: parseFloat(subtotal.toFixed(2)),
+        discount: parseFloat(discount.toFixed(2)),
+        shipping: parseFloat(shipping.toFixed(2)),
+        tax: parseFloat(tax.toFixed(2)),
+        grandTotal: parseFloat(grandTotal.toFixed(2)),
+        itemCount: formattedItems.length,
+      },
     };
 
     return ApiResponse.success(res, 'Cart retrieved successfully', response);
@@ -1257,14 +1110,14 @@ export const checkout = async (req, res, next) => {
 //     firstName,
 //     lastName,
 //     phone,
-//     email,
+//     email, // For guests
 //     deliveryAddress,
 //     city,
 //     postCode,
 //     country,
 //     paymentMethod: rawPaymentMethod,
-//     shippingMethod,
-//     taxRate,
+//     shippingMethod, // Optional, defaults to 0 cost if not provided
+//     taxRate, // Optional, defaults to 0 if not provided
 //   } = req.body;
 
 //   const t = await sequelize.transaction();
@@ -1272,14 +1125,27 @@ export const checkout = async (req, res, next) => {
 //     let cart;
 //     let userEmail;
 
+//     // Debug: Log the user and session information
+//     console.log('Checkout - req.user:', req.user);
+//     console.log('Checkout - req.session:', req.session);
+
+//     // Validate paymentMethod
 //     const validPaymentMethods = Object.values(PAYMENT_METHODS);
 //     const paymentMethod = validPaymentMethods.find(
-//       (method) => method.toLowerCase() === rawPaymentMethod?.toLowerCase(),
+//       (method) => method.toLowerCase() === rawPaymentMethod.toLowerCase(),
 //     )
 //       ? rawPaymentMethod.toLowerCase()
 //       : PAYMENT_METHODS.PAYPAL || 'paypal';
 
+//     if (!validPaymentMethods.includes(rawPaymentMethod.toLowerCase())) {
+//       console.warn(
+//         `Invalid payment method "${rawPaymentMethod}" provided. Defaulting to "${PAYMENT_METHODS.PAYPAL || 'paypal'}".`,
+//       );
+//     }
+
+//     // Check if the user is authenticated or a guest
 //     if (req.user && req.user.id) {
+//       console.log('Checkout - Authenticated user detected:', req.user.id);
 //       cart = await Cart.findOne({
 //         where: { userId: req.user.id, status: CART_STATUS.ACTIVE },
 //         transaction: t,
@@ -1297,7 +1163,9 @@ export const checkout = async (req, res, next) => {
 //       const user = await User.findByPk(req.user.id, { attributes: ['email'], transaction: t });
 //       userEmail = user.email;
 //     } else {
+//       console.log('Checkout - Guest checkout detected');
 //       const sessionId = req.session?.id || 'guest-session';
+//       console.log('Checkout - Session ID:', sessionId);
 //       cart = await Cart.findOne({
 //         where: { sessionId, status: CART_STATUS.ACTIVE },
 //         transaction: t,
@@ -1312,14 +1180,20 @@ export const checkout = async (req, res, next) => {
 //           { transaction: t },
 //         );
 //       }
-//       if (!email) throw new Error('Email is required for guest checkout');
+//       if (!email) {
+//         throw new Error('Email is required for guest checkout');
+//       }
 //       userEmail = email;
 //     }
 
 //     if (!cart) throw new Error(ERROR_MESSAGES.CART_NOT_FOUND);
 
+//     console.log('Checkout - Cart found:', cart.id);
+
 //     const items = await CartItem.findAll({ where: { cartId: cart.id }, transaction: t });
 //     if (!items.length) throw new Error(ERROR_MESSAGES.CART_EMPTY);
+
+//     console.log('Checkout - Cart items:', items.length);
 
 //     const productIds = items.map((item) => item.productId);
 //     const variantIds = items.map((item) => item.variantId).filter(Boolean);
@@ -1336,14 +1210,20 @@ export const checkout = async (req, res, next) => {
 //     for (const item of items) {
 //       const product = productMap.get(item.productId);
 //       const variant = item.variantId ? variantMap.get(item.variantId) : null;
-//       if (!product || product.stockQuantity < item.quantity) {
-//         throw new Error(`Insufficient stock for product ${product?.name || item.productId}`);
-//       }
+//       if (!product || product.stockQuantity < item.quantity)
+//         throw new Error(ERROR_MESSAGES.PRODUCT_INSUFFICIENT_STOCK);
 
-//       const unitPrice = variant
-//         ? parseFloat(variant.price || product.price)
-//         : parseFloat(product.price);
-//       if (isNaN(unitPrice)) throw new Error('Invalid price for product');
+//       console.log(
+//         `Product ID: ${item.productId}, Product Price: ${product.price}, Variant Price: ${variant?.price}`,
+//       );
+
+//       const unitPriceRaw = variant ? variant.price || product.price : product.price;
+//       const unitPrice = parseFloat(unitPriceRaw) || 0;
+
+//       if (isNaN(unitPrice)) {
+//         console.error(`Invalid unitPrice for product ID ${item.productId}: ${unitPriceRaw}`);
+//         throw new Error('Invalid price for product');
+//       }
 
 //       subtotal += unitPrice * item.quantity;
 //       orderItemsDetails.push({
@@ -1354,15 +1234,22 @@ export const checkout = async (req, res, next) => {
 //       });
 //     }
 
+//     // Calculate delivery fee based on shippingMethod
 //     const deliveryFee =
 //       shippingMethod && SHIPPING_FEES[shippingMethod] !== undefined
 //         ? parseFloat(SHIPPING_FEES[shippingMethod])
 //         : 0.0;
+
+//     // No coupon system, so discount is always 0
 //     const discount = 0.0;
+
+//     // Calculate tax based on taxRate
 //     const tax = taxRate && taxRate > 0 ? subtotal * (taxRate / 100) : 0.0;
+
 //     const totalAmount = subtotal - discount + deliveryFee + tax;
 //     const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
+//     // Create the order in the database
 //     const order = await Order.create(
 //       {
 //         userId: req.user?.id || null,
@@ -1392,9 +1279,8 @@ export const checkout = async (req, res, next) => {
 //     const orderItems = items.map((item) => {
 //       const product = productMap.get(item.productId);
 //       const variant = item.variantId ? variantMap.get(item.variantId) : null;
-//       const unitPrice = variant
-//         ? parseFloat(variant.price || product.price)
-//         : parseFloat(product.price);
+//       const unitPriceRaw = variant ? variant.price || product.price : product.price;
+//       const unitPrice = parseFloat(unitPriceRaw) || 0;
 
 //       return {
 //         orderId: order.id,
@@ -1414,12 +1300,11 @@ export const checkout = async (req, res, next) => {
 
 //     await OrderItem.bulkCreate(orderItems, { transaction: t });
 
-//     // Update Product stock only
 //     await Promise.all(
-//       items.map(({ productId, quantity }) =>
-//         Product.update(
+//       items.map(({ productId, variantId, quantity }) =>
+//         (variantId ? ProductVariant : Product).update(
 //           { stockQuantity: sequelize.literal(`"stockQuantity" - ${quantity}`) },
-//           { where: { id: productId }, transaction: t },
+//           { where: { id: variantId || productId }, transaction: t },
 //         ),
 //       ),
 //     );
@@ -1432,6 +1317,7 @@ export const checkout = async (req, res, next) => {
 
 //     await t.commit();
 
+//     // Handle PayPal payment if selected
 //     let paypalOrderData = null;
 //     if (paymentMethod === PAYMENT_METHODS.PAYPAL) {
 //       try {
@@ -1472,12 +1358,14 @@ export const checkout = async (req, res, next) => {
 //         const orderWithItems = await Order.findByPk(order.id, {
 //           include: [{ model: OrderItem, as: 'items' }],
 //         });
+
 //         await sendOrderConfirmationEmail(userEmail, orderWithItems, orderWithItems.items);
 //       } catch (emailError) {
 //         console.error('Error sending order confirmation email:', emailError);
 //       }
 //     }
 
+//     // Prepare the financial summary for the response
 //     const financialSummary = {
 //       subtotal: parseFloat(subtotal.toFixed(2)),
 //       discount: parseFloat(discount.toFixed(2)),
@@ -1487,6 +1375,7 @@ export const checkout = async (req, res, next) => {
 //       itemCount: items.length,
 //     };
 
+//     // Return response based on payment method
 //     if (paymentMethod === PAYMENT_METHODS.PAYPAL && paypalOrderData) {
 //       return ApiResponse.success(
 //         res,
@@ -1521,281 +1410,30 @@ export const checkout = async (req, res, next) => {
 //   }
 // };
 
-// This is the updated checkout function with improved error handling and logging
-export const checkout = async (req, res, next) => {
-  const {
-    firstName,
-    lastName,
-    phone,
-    email,
-    deliveryAddress,
-    city,
-    postCode,
-    country,
-    paymentMethod: rawPaymentMethod,
-    shippingMethod,
-    taxRate,
-  } = req.body;
-
-  const t = await sequelize.transaction();
-  try {
-    let cart;
-    let userEmail;
-
-    const validPaymentMethods = Object.values(PAYMENT_METHODS);
-    const paymentMethod = validPaymentMethods.find(
-      (method) => method.toLowerCase() === rawPaymentMethod?.toLowerCase(),
-    )
-      ? rawPaymentMethod.toLowerCase()
-      : PAYMENT_METHODS.PAYPAL || 'paypal';
-
-    if (req.user && req.user.id) {
-      cart = await Cart.findOne({
-        where: { userId: req.user.id, status: CART_STATUS.ACTIVE },
-        transaction: t,
-      });
-      if (!cart) {
-        cart = await Cart.create(
-          {
-            userId: req.user.id,
-            status: CART_STATUS.ACTIVE,
-            expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          },
-          { transaction: t },
-        );
-      }
-      const user = await User.findByPk(req.user.id, { attributes: ['email'], transaction: t });
-      userEmail = user.email;
-    } else {
-      const sessionId = req.session?.id || 'guest-session';
-      cart = await Cart.findOne({
-        where: { sessionId, status: CART_STATUS.ACTIVE },
-        transaction: t,
-      });
-      if (!cart) {
-        cart = await Cart.create(
-          {
-            sessionId,
-            status: CART_STATUS.ACTIVE,
-            expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          },
-          { transaction: t },
-        );
-      }
-      if (!email) throw new Error('Email is required for guest checkout');
-      userEmail = email;
-    }
-
-    if (!cart) throw new Error(ERROR_MESSAGES.CART_NOT_FOUND);
-
-    const items = await CartItem.findAll({ where: { cartId: cart.id }, transaction: t });
-    if (!items.length) throw new Error(ERROR_MESSAGES.CART_EMPTY);
-
-    const productIds = items.map((item) => item.productId);
-    const variantIds = items.map((item) => item.variantId).filter(Boolean);
-    const [products, variants] = await Promise.all([
-      Product.findAll({ where: { id: productIds }, transaction: t }),
-      ProductVariant.findAll({ where: { id: variantIds }, transaction: t }),
-    ]);
-
-    const productMap = new Map(products.map((product) => [product.id, product]));
-    const variantMap = new Map(variants.map((variant) => [variant.id, variant]));
-
-    // Prepare order items with consistent format
-    const orderItems = [];
-    const orderItemsDetails = [];
-    for (const item of items) {
-      const product = productMap.get(item.productId);
-      const variant = item.variantId ? variantMap.get(item.variantId) : null;
-      if (!product || product.stockQuantity < item.quantity) {
-        throw new Error(`Insufficient stock for product ${product?.name || item.productId}`);
-      }
-
-      const unitPrice = variant
-        ? parseFloat(variant.price || product.price)
-        : parseFloat(product.price);
-      if (isNaN(unitPrice)) throw new Error('Invalid price for product');
-
-      orderItems.push({
-        productId: item.productId,
-        variantId: item.variantId,
-        quantity: item.quantity,
-        unitPrice,
-      });
-
-      orderItemsDetails.push({
-        name: product.name,
-        quantity: item.quantity,
-        unitPrice: unitPrice.toFixed(2),
-        total: (unitPrice * item.quantity).toFixed(2),
-      });
-    }
-
-    // Use the shared utility for financial calculations
-    const financialSummary = calculateFinancialSummary(orderItems, {
-      shippingMethod,
-      taxRate: taxRate || 0,
-      discount: 0,
-      applyShipping: true,
-    });
-
-    // Setting delivery fee to 0 as requested
-    financialSummary.deliveryFee = 0;
-    // Recalculate total with zero delivery fee
-    financialSummary.totalAmount =
-      financialSummary.subtotal -
-      financialSummary.discount +
-      financialSummary.deliveryFee +
-      financialSummary.tax;
-    financialSummary.totalAmount = parseFloat(financialSummary.totalAmount.toFixed(2));
-
-    const orderNumber = generateOrderNumber();
-
-    const order = await Order.create(
-      {
-        userId: req.user?.id || null,
-        orderNumber,
-        status: ORDER_STATUS.PENDING,
-        totalAmount: financialSummary.totalAmount,
-        subtotal: financialSummary.subtotal,
-        tax: financialSummary.tax,
-        deliveryFee: financialSummary.deliveryFee,
-        discount: financialSummary.discount,
-        firstName,
-        lastName,
-        deliveryAddress,
-        city,
-        postCode,
-        country,
-        phone,
-        paymentMethod,
-        paymentStatus: PAYMENT_STATUS.PENDING,
-        shippingMethod: shippingMethod || null,
-        email: userEmail,
-        processedAt: new Date(),
-      },
-      { transaction: t },
-    );
-
-    // Create order items with consistent format
-    const dbOrderItems = orderItems.map((item) => {
-      const product = productMap.get(item.productId);
-      const variant = item.variantId ? variantMap.get(item.variantId) : null;
-
-      return {
-        orderId: order.id,
-        productId: item.productId,
-        variantId: item.variantId,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        subtotal: item.unitPrice * item.quantity,
-        productSnapshot: {
-          name: product.name,
-          price: item.unitPrice,
-          image:
-            product.featuredImage ||
-            (product.images && product.images.length > 0 ? product.images[0].url : null),
-          variant: variant ? { size: variant.size, color: variant.color } : null,
-        },
-      };
-    });
-
-    await OrderItem.bulkCreate(dbOrderItems, { transaction: t });
-
-    // Update Product stock only
-    await Promise.all(
-      items.map(({ productId, quantity }) =>
-        Product.update(
-          { stockQuantity: sequelize.literal(`"stockQuantity" - ${quantity}`) },
-          { where: { id: productId }, transaction: t },
-        ),
-      ),
-    );
-
-    await Cart.update(
-      { status: CART_STATUS.CONVERTED },
-      { where: { id: cart.id }, transaction: t },
-    );
-    await CartItem.destroy({ where: { cartId: cart.id }, transaction: t });
-
-    await t.commit();
-
-    let paypalOrderData = null;
-    if (paymentMethod === PAYMENT_METHODS.PAYPAL) {
-      try {
-        const orderWithItems = await Order.findByPk(order.id, {
-          include: [{ model: OrderItem, as: 'items' }],
-        });
-
-        const paypalOrderInfo = {
-          id: orderWithItems.id,
-          orderNumber: orderWithItems.orderNumber,
-          totalAmount: parseFloat(orderWithItems.totalAmount),
-          subtotal: parseFloat(orderWithItems.subtotal),
-          tax: parseFloat(orderWithItems.tax || 0),
-          deliveryFee: parseFloat(orderWithItems.deliveryFee || 0),
-          discount: parseFloat(orderWithItems.discount || 0),
-          firstName: orderWithItems.firstName,
-          lastName: orderWithItems.lastName,
-          deliveryAddress: orderWithItems.deliveryAddress,
-          city: orderWithItems.city,
-          postCode: orderWithItems.postCode,
-          items: orderWithItems.items.map((item) => ({
-            productId: item.productId,
-            name: item.productSnapshot?.name || `Product ID: ${item.productId}`,
-            unitPrice: parseFloat(item.unitPrice),
-            quantity: item.quantity,
-          })),
-        };
-
-        const paypalService = await import('../services/paypalService.js');
-        paypalOrderData = await paypalService.createPayPalOrder(paypalOrderInfo);
-
-        await Order.update({ paypalOrderId: paypalOrderData.id }, { where: { id: order.id } });
-      } catch (paypalError) {
-        console.error('PayPal order creation error:', paypalError);
-      }
-    } else {
-      try {
-        const orderWithItems = await Order.findByPk(order.id, {
-          include: [{ model: OrderItem, as: 'items' }],
-        });
-        await sendOrderConfirmationEmail(userEmail, orderWithItems, orderWithItems.items);
-      } catch (emailError) {
-        console.error('Error sending order confirmation email:', emailError);
-      }
-    }
-
-    if (paymentMethod === PAYMENT_METHODS.PAYPAL && paypalOrderData) {
-      return ApiResponse.success(
-        res,
-        'Checkout successful - Redirecting to PayPal',
-        {
-          orderId: order.id,
-          orderNumber: order.orderNumber,
-          summary: financialSummary,
-          paypal: {
-            orderId: paypalOrderData.id,
-            approvalUrl: paypalOrderData.links.find((link) => link.rel === 'approve').href,
-          },
-        },
-        HTTP_STATUS_CODES.CREATED,
-      );
-    } else {
-      return ApiResponse.success(
-        res,
-        'Checkout successful',
-        {
-          orderId: order.id,
-          orderNumber: order.orderNumber,
-          summary: financialSummary,
-        },
-        HTTP_STATUS_CODES.CREATED,
-      );
-    }
-  } catch (error) {
-    await t.rollback();
-    console.error('Checkout error:', error);
-    next(error);
-  }
-};
+// async function getCartItems(cartId) {
+//   try {
+//     const items = await CartItem.findAll({
+//       where: { cartId },
+//       include: [
+//         {
+//           model: Product,
+//           as: 'product',
+//           include: [
+//             {
+//               model: ProductVariant,
+//               as: 'variants',
+//               required: false,
+//             },
+//           ],
+//         },
+//       ],
+//     });
+//     if (!items.length) {
+//       console.warn(`No items found for cartId: ${cartId}`);
+//     }
+//     return items;
+//   } catch (error) {
+//     console.error('Error in getCartItems:', error.message, error.stack);
+//     return [];
+//   }
+// }
