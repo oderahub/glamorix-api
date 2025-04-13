@@ -614,6 +614,184 @@ export const addProductImages = async (req, res, next) => {
   }
 };
 
+// export const createProduct = async (req, res, next) => {
+//   const t = await sequelize.transaction();
+//   try {
+//     const {
+//       name,
+//       description,
+//       price,
+//       discountPercentage,
+//       stockQuantity,
+//       sku,
+//       isActive,
+//       categoryIds = [],
+//       variants = [],
+//     } = req.body;
+
+//     const slug = slugify(name, { lower: true, strict: true });
+
+//     // Create product
+//     const product = await Product.create(
+//       {
+//         name,
+//         slug,
+//         description,
+//         price,
+//         discountPercentage,
+//         stockQuantity: stockQuantity || 0,
+//         sku,
+//         isActive: PRODUCT_STATUS.ACTIVE,
+//         featuredImage:
+//           req.files && req.files.length > 0 ? req.files[0].buffer.toString('base64') : null,
+//       },
+//       { transaction: t },
+//     );
+
+//     // Handle multiple images
+//     if (req.files && req.files.length > 0) {
+//       const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+//       const imageData = req.files.map((file, index) => {
+//         if (file.size > MAX_FILE_SIZE) {
+//           throw new Error(`File ${file.originalname} exceeds maximum size of 5MB`);
+//         }
+
+//         return {
+//           id: uuidv4(),
+//           productId: product.id,
+//           imageData: file.buffer.toString('base64'),
+//           mimeType: file.mimetype,
+//           displayOrder: index,
+//           isDefault: index === 0,
+//         };
+//       });
+//       await ProductImage.bulkCreate(imageData, {
+//         transaction: t,
+//         validate: true,
+//       });
+//     }
+
+//     if (categoryIds.length > 0) {
+//       const productCategories = categoryIds.map((categoryId) => ({
+//         productId: product.id,
+//         categoryId,
+//         isPrimary: categoryId === categoryIds[0],
+//       }));
+//       await ProductCategory.bulkCreate(productCategories, { transaction: t });
+//     }
+
+//     if (variants.length > 0) {
+//       const variantData = variants.map((variant, index) => ({
+//         id: uuidv4(),
+//         productId: product.id,
+//         size: variant.size || 'N/A',
+//         color: variant.color || 'N/A',
+//         material: variant.material || 'N/A',
+//         price: variant.price || price,
+//         stockQuantity: variant.stockQuantity || 0,
+//         sku: `${slug}-${index + 1}`,
+//         createdAt: new Date(),
+//         updatedAt: new Date(),
+//       }));
+//       await ProductVariant.bulkCreate(variantData, { transaction: t });
+//     }
+
+//     await t.commit();
+
+//     const result = await Product.findByPk(product.id, {
+//       include: [
+//         { model: Category, as: 'categories', through: { attributes: [] } },
+//         { model: ProductVariant, as: 'variants' },
+//         {
+//           model: ProductImage,
+//           as: 'images',
+//           attributes: ['id', 'displayOrder', 'isDefault', 'mimeType'],
+//         },
+//       ],
+//     });
+
+//     // Transform result to include image URLs
+//     const baseUrl = `${req.protocol}://${req.get('host')}`;
+//     const transformedResult = transformProductData(result, baseUrl);
+
+//     return ApiResponse.success(res, 'Product created successfully', transformedResult, 201);
+//   } catch (error) {
+//     await t.rollback();
+//     next(error);
+//   }
+// };
+
+// export const updateProduct = async (req, res, next) => {
+//   const t = await sequelize.transaction();
+//   try {
+//     const product = await Product.findByPk(req.params.id, { paranoid: false });
+//     if (!product) {
+//       return ApiResponse.error(res, ERROR_MESSAGES.PRODUCT_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
+//     }
+
+//     const updatedData = { ...req.body };
+//     if (req.file) {
+//       updatedData.featuredImage = req.file.buffer.toString('base64');
+//     }
+//     if (updatedData.name) {
+//       updatedData.slug = slugify(updatedData.name, { lower: true, strict: true });
+//     }
+//     await product.update(updatedData, { transaction: t });
+
+//     if (req.body.categoryIds) {
+//       await ProductCategory.destroy({ where: { productId: product.id }, transaction: t });
+//       const productCategories = req.body.categoryIds.map((categoryId) => ({
+//         productId: product.id,
+//         categoryId,
+//         isPrimary: categoryId === req.body.categoryIds[0],
+//       }));
+//       await ProductCategory.bulkCreate(productCategories, { transaction: t });
+//     }
+
+//     if (req.body.variants) {
+//       await ProductVariant.destroy({ where: { productId: product.id }, transaction: t });
+//       const variantData = req.body.variants.map((variant, index) => ({
+//         id: uuidv4(), // Generate UUID
+//         productId: product.id,
+//         size: variant.size || 'N/A',
+//         color: variant.color || 'N/A',
+//         material: variant.material || 'N/A',
+//         price: variant.price || product.price,
+//         stockQuantity: variant.stockQuantity || 0,
+//         sku: `${product.slug}-${index + 1}`,
+//         createdAt: new Date(),
+//         updatedAt: new Date(),
+//       }));
+//       await ProductVariant.bulkCreate(variantData, { transaction: t });
+//     }
+
+//     await t.commit();
+
+//     const result = await Product.findByPk(product.id, {
+//       include: [
+//         { model: Category, as: 'categories', through: { attributes: [] } },
+//         { model: ProductVariant, as: 'variants' },
+//         {
+//           model: ProductImage,
+//           as: 'images',
+//           attributes: ['id', 'displayOrder', 'isDefault', 'mimeType'],
+//         },
+//       ],
+//     });
+
+//     // Transform result to include image URLs
+//     const baseUrl = `${req.protocol}://${req.get('host')}`;
+//     const transformedResult = transformProductData(result, baseUrl);
+
+//     return ApiResponse.success(res, 'Product updated successfully', transformedResult);
+//   } catch (error) {
+//     await t.rollback();
+//     next(error);
+//   }
+// };
+
+// UPDATED PRODUCT AND STOCK VARIANT QUANTITY HANDLING
+
 export const createProduct = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
@@ -683,6 +861,7 @@ export const createProduct = async (req, res, next) => {
       await ProductCategory.bulkCreate(productCategories, { transaction: t });
     }
 
+    // Apply product stock quantity to variants if variants exist
     if (variants.length > 0) {
       const variantData = variants.map((variant, index) => ({
         id: uuidv4(),
@@ -697,6 +876,22 @@ export const createProduct = async (req, res, next) => {
         updatedAt: new Date(),
       }));
       await ProductVariant.bulkCreate(variantData, { transaction: t });
+    }
+    // If no variants were provided, create a default variant with the product's stock
+    else if (stockQuantity) {
+      const defaultVariant = {
+        id: uuidv4(),
+        productId: product.id,
+        size: 'N/A',
+        color: 'N/A',
+        material: 'N/A',
+        price: price,
+        stockQuantity: stockQuantity,
+        sku: `${slug}-default`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      await ProductVariant.create(defaultVariant, { transaction: t });
     }
 
     await t.commit();
@@ -742,6 +937,9 @@ export const updateProduct = async (req, res, next) => {
       await ProductCategory.bulkCreate(productCategories, { transaction: t });
     }
 
+    // If stockQuantity is updated at product level, update it for all variants as well
+    const stockQuantityUpdated = req.body.stockQuantity !== undefined;
+
     if (req.body.variants) {
       await ProductVariant.destroy({ where: { productId: product.id }, transaction: t });
       const variantData = req.body.variants.map((variant, index) => ({
@@ -757,6 +955,17 @@ export const updateProduct = async (req, res, next) => {
         updatedAt: new Date(),
       }));
       await ProductVariant.bulkCreate(variantData, { transaction: t });
+    }
+    // If stockQuantity is updated but no variants are provided in the update
+    else if (stockQuantityUpdated) {
+      // Update stock quantity for all existing variants
+      await ProductVariant.update(
+        { stockQuantity: req.body.stockQuantity },
+        {
+          where: { productId: product.id },
+          transaction: t,
+        },
+      );
     }
 
     await t.commit();
