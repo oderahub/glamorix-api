@@ -944,7 +944,6 @@ export const updateProduct = async (req, res, next) => {
       await ProductVariant.destroy({ where: { productId: product.id }, transaction: t });
       const variantData = req.body.variants.map((variant, index) => ({
         id: uuidv4(),
-        id: uuidv4(),
         productId: product.id,
         size: variant.size || 'N/A',
         color: variant.color || 'N/A',

@@ -6,7 +6,7 @@ import {
   HTTP_STATUS_CODES,
   ERROR_MESSAGES,
   ORDER_STATUS,
-  SHIPPING_METHODS,
+  SHIPPING_METHODS
 } from '../constants/constant.js';
 
 // Helper function to transform order images
@@ -16,20 +16,23 @@ const transformOrderImages = (req, order) => {
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const transformedOrder = { ...order.toJSON() };
 
+  transformedOrder.subtotal = parseFloat(transformedOrder.subtotal).toFixed(2);
+  transformedOrder.totalAmount = parseFloat(transformedOrder.totalAmount).toFixed(2);
+  transformedOrder.tax = parseFloat(transformedOrder.tax).toFixed(2);
+  transformedOrder.shippingCost = parseFloat(transformedOrder.shippingCost).toFixed(2);
+  transformedOrder.discount = parseFloat(transformedOrder.discount).toFixed(2);
+
   transformedOrder.items = transformedOrder.items.map((item) => {
-    // Add image URL to the product snapshot if imageId is available
     if (item.productSnapshot && item.productSnapshot.imageId) {
       item.productSnapshot.imageUrl = `${baseUrl}/api/products/images/${item.productSnapshot.imageId}`;
+      item.productSnapshot.price = parseFloat(item.productSnapshot.price).toFixed(2);
     }
-
-    // If the item has a productImage relation, use that for the URL
     if (item.productImage) {
       item.imageUrl = `${baseUrl}/api/products/images/${item.productImage.id}`;
-
-      // Clean up by removing base64 data if present
       delete item.productImage.imageData;
     }
-
+    item.unitPrice = parseFloat(item.unitPrice).toFixed(2);
+    item.subtotal = parseFloat(item.subtotal).toFixed(2);
     return item;
   });
 
@@ -45,7 +48,6 @@ const generateOrderNumber = () => {
     .padStart(3, '0');
   return `${prefix}-${timestamp}-${random}`;
 };
-
 export const placeOrder = async (req, res, next) => {
   const {
     items,
@@ -64,124 +66,11 @@ export const placeOrder = async (req, res, next) => {
   try {
     t = await sequelize.transaction();
 
-    // Calculate totals and validate items
+    // Validate and calculate order items
     let subtotal = 0;
-    for (const item of items) {
-      const product = await Product.findByPk(item.productId, { transaction: t });
-      if (!product) {
-        throw new Error(ERROR_MESSAGES.PRODUCT_NOT_FOUND);
-      }
-      if (item.variantId) {
-        const variant = await ProductVariant.findByPk(item.variantId, { transaction: t });
-        if (!variant || variant.productId !== item.productId) {
-          throw new Error(ERROR_MESSAGES.PRODUCT_VARIANT_NOT_FOUND);
-        }
-        if (variant.stockQuantity < item.quantity) {
-          throw new Error(ERROR_MESSAGES.PRODUCT_INSUFFICIENT_STOCK);
-        }
-        subtotal += (variant.price || product.price) * item.quantity;
-      } else {
-        if (product.stockQuantity < item.quantity) {
-          throw new Error(ERROR_MESSAGES.PRODUCT_INSUFFICIENT_STOCK);
-        }
-        subtotal += product.price * item.quantity;
-      }
-    }
-
-    // Placeholder for tax and shipping cost
-    const tax = 0.0; // Example: Add tax calculation logic
-    const shippingCost = shippingMethod === SHIPPING_METHODS.FREE_SHIPPING ? 0.0 : 10.0;
-    const discount = 0.0;
-    const totalAmount = subtotal + tax + shippingCost - discount;
-
-    // Create order with generated order number
-    const order = await Order.create(
-      {
-        userId: req.user.id,
-        orderNumber: generateOrderNumber(),
-        status: ORDER_STATUS.PENDING,
-        totalAmount,
-        subtotal,
-        tax,
-        shippingCost,
-        discount,
-        shippingFirstName,
-        shippingLastName,
-        shippingAddress,
-        shippingCity,
-        shippingZip,
-        shippingPhone,
-        shippingMethod,
-        email: email || (await User.findByPk(req.user.id)).email,
-        paymentMethod,
-      },
-      { transaction: t },
-    );
-
-    // Create order items and update stock
-    //     const orderItems = await Promise.all(
-    //       items.map(async (item) => {
-    //         const product = await Product.findByPk(item.productId, { transaction: t });
-    //         const variant = item.variantId
-    //           ? await ProductVariant.findByPk(item.variantId, { transaction: t })
-    //           : null;
-    //         const unitPrice = variant ? variant.price || product.price : product.price;
-    //         const itemSubtotal = unitPrice * item.quantity;
-    //         const snapshot = {
-    //           name: product.name,
-    //           price: unitPrice,
-    //           variant: variant ? { size: variant.size, color: variant.color } : null,
-    //         };
-
-    //         if (variant) {
-    //           await ProductVariant.update(
-    //             { stockQuantity: variant.stockQuantity - item.quantity },
-    //             { where: { id: variant.id }, transaction: t },
-    //           );
-    //         } else {
-    //           await Product.update(
-    //             { stockQuantity: product.stockQuantity - item.quantity },
-    //             { where: { id: product.id }, transaction: t },
-    //           );
-    //         }
-
-    //         return {
-    //           orderId: order.id,
-    //           productId: item.productId,
-    //           variantId: item.variantId,
-    //           quantity: item.quantity,
-    //           unitPrice,
-    //           subtotal: itemSubtotal,
-    //           discount: 0.0,
-    //           productSnapshot: snapshot,
-    //         };
-    //       }),
-    //     );
-
-    //     await OrderItem.bulkCreate(orderItems, { transaction: t });
-
-    //     await t.commit();
-    //     t = null;
-
-    //     const createdOrder = await Order.findByPk(order.id, {
-    //       include: [{ model: OrderItem, as: 'items' }],
-    //     });
-
-    //     return ApiResponse.success(
-    //       res,
-    //       'Order placed successfully',
-    //       createdOrder,
-    //       HTTP_STATUS_CODES.CREATED,
-    //     );
-    //   } catch (error) {
-    //     // Only roll back if transaction exists and hasn't been committed
-    //     if (t) await t.rollback();
-    //     next(error);
-    //   }
-
-    // Create order items and update stock
     const orderItems = await Promise.all(
       items.map(async (item) => {
+        // Fetch product with default image
         const product = await Product.findByPk(item.productId, {
           transaction: t,
           include: [
@@ -194,54 +83,109 @@ export const placeOrder = async (req, res, next) => {
             },
           ],
         });
+        if (!product) {
+          throw new Error(`Product not found: ${item.productId}`);
+        }
 
-        const variant = item.variantId
-          ? await ProductVariant.findByPk(item.variantId, { transaction: t })
-          : null;
+        // Validate stock using Product.stockQuantity
+        if (product.stockQuantity < item.quantity) {
+          throw new Error(`Insufficient stock for product ${product.name} (available: ${product.stockQuantity})`);
+        }
 
-        const unitPrice = variant ? variant.price || product.price : product.price;
-        const itemSubtotal = unitPrice * item.quantity;
+        // Determine unit price
+        let unitPrice;
+        let variant = null;
+        if (item.variantId) {
+          variant = await ProductVariant.findByPk(item.variantId, { transaction: t });
+          if (!variant || variant.productId !== item.productId) {
+            throw new Error(`Invalid variant ${item.variantId} for product ${item.productId}`);
+          }
+          unitPrice = variant.price !== null ? parseFloat(variant.price) : parseFloat(product.price);
+        } else {
+          unitPrice = parseFloat(product.price);
+        }
 
-        // Include image information in the product snapshot
+        if (isNaN(unitPrice) || unitPrice <= 0) {
+          throw new Error(`Invalid price for product ${product.name}: ${unitPrice}`);
+        }
+
+        // Calculate item subtotal with precision
+        const itemSubtotal = parseFloat((unitPrice * item.quantity).toFixed(2));
+        subtotal += itemSubtotal;
+
+        // Build product snapshot
         const defaultImage = product.images && product.images.length > 0 ? product.images[0] : null;
-
         const snapshot = {
           name: product.name,
-          price: unitPrice,
-          variant: variant ? { size: variant.size, color: variant.color } : null,
+          price: unitPrice.toFixed(2),
+          variant: variant ? { size: variant.size, color: variant.color, material: variant.material } : null,
           imageId: defaultImage ? defaultImage.id : null,
         };
 
-        if (variant) {
-          await ProductVariant.update(
-            { stockQuantity: variant.stockQuantity - item.quantity },
-            { where: { id: variant.id }, transaction: t },
-          );
-        } else {
-          await Product.update(
-            { stockQuantity: product.stockQuantity - item.quantity },
-            { where: { id: product.id }, transaction: t },
-          );
-        }
-
         return {
-          orderId: order.id,
+          orderId: null, // Set later
           productId: item.productId,
-          variantId: item.variantId,
+          variantId: item.variantId || null,
           quantity: item.quantity,
-          unitPrice,
+          unitPrice: unitPrice.toFixed(2),
           subtotal: itemSubtotal,
           discount: 0.0,
           productSnapshot: snapshot,
         };
-      }),
+      })
     );
 
+    // Calculate financials
+    const tax = 0.0; // Add tax logic if needed
+    const shippingCost = shippingMethod === SHIPPING_METHODS.FREE_SHIPPING ? 0.0 : 10.0;
+    const discount = 0.0;
+    const totalAmount = parseFloat((subtotal + tax + shippingCost - discount).toFixed(2));
+
+    // Create order
+    const order = await Order.create(
+      {
+        userId: req.user.id,
+        orderNumber: generateOrderNumber(),
+        status: ORDER_STATUS.PENDING,
+        totalAmount: totalAmount.toFixed(2),
+        subtotal: subtotal.toFixed(2),
+        tax: tax.toFixed(2),
+        shippingCost: shippingCost.toFixed(2),
+        discount: discount.toFixed(2),
+        shippingFirstName,
+        shippingLastName,
+        shippingAddress,
+        shippingCity,
+        shippingZip,
+        shippingPhone,
+        shippingMethod,
+        email: email || (await User.findByPk(req.user.id, { transaction: t })).email,
+        paymentMethod,
+      },
+      { transaction: t }
+    );
+
+    // Assign orderId to items
+    orderItems.forEach((item) => {
+      item.orderId = order.id;
+    });
+
+    // Create order items
     await OrderItem.bulkCreate(orderItems, { transaction: t });
 
-    await t.commit();
-    t = null;
+    // Update Product stock
+    await Promise.all(
+      items.map(async (item) => {
+        await Product.update(
+          { stockQuantity: sequelize.literal(`"stockQuantity" - ${item.quantity}`) },
+          { where: { id: item.productId }, transaction: t }
+        );
+      })
+    );
 
+    await t.commit();
+
+    // Fetch created order
     const createdOrder = await Order.findByPk(order.id, {
       include: [
         {
@@ -254,25 +198,23 @@ export const placeOrder = async (req, res, next) => {
               attributes: ['id', 'isDefault', 'mimeType'],
               where: { isDefault: true },
               required: false,
-              limit: 1,
             },
           ],
         },
       ],
     });
 
-    // Transform the order to include image URLs
     const transformedOrder = transformOrderImages(req, createdOrder);
 
     return ApiResponse.success(
       res,
       'Order placed successfully',
       transformedOrder,
-      HTTP_STATUS_CODES.CREATED,
+      HTTP_STATUS_CODES.CREATED
     );
   } catch (error) {
-    // Only roll back if transaction exists and hasn't been committed
     if (t) await t.rollback();
+    console.error('Error in placeOrder:', error.message, error.stack);
     next(error);
   }
 };
@@ -397,31 +339,28 @@ export const cancelOrder = async (req, res, next) => {
 
     if (!order) {
       await t.rollback();
-      t = null;
       return ApiResponse.error(res, ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS_CODES.NOT_FOUND);
     }
 
     if ([ORDER_STATUS.SHIPPED, ORDER_STATUS.DELIVERED].includes(order.status)) {
       await t.rollback();
-      t = null;
       return ApiResponse.error(
         res,
         ERROR_MESSAGES.ORDER_ALREADY_SHIPPED,
-        HTTP_STATUS_CODES.FORBIDDEN,
+        HTTP_STATUS_CODES.FORBIDDEN
       );
     }
 
     if (order.status === ORDER_STATUS.CANCELED) {
       await t.rollback();
-      t = null;
       return ApiResponse.error(
         res,
         ERROR_MESSAGES.ORDER_ALREADY_CANCELED,
-        HTTP_STATUS_CODES.CONFLICT,
+        HTTP_STATUS_CODES.CONFLICT
       );
     }
 
-    // Restore stock
+    // Restore stock to Product only
     const items = await OrderItem.findAll({
       where: { orderId: order.id },
       transaction: t,
@@ -429,24 +368,11 @@ export const cancelOrder = async (req, res, next) => {
 
     await Promise.all(
       items.map(async (item) => {
-        if (item.variantId) {
-          const variant = await ProductVariant.findByPk(item.variantId, { transaction: t });
-          await variant.update(
-            {
-              stockQuantity: variant.stockQuantity + item.quantity,
-            },
-            { transaction: t },
-          );
-        } else {
-          const product = await Product.findByPk(item.productId, { transaction: t });
-          await product.update(
-            {
-              stockQuantity: product.stockQuantity + item.quantity,
-            },
-            { transaction: t },
-          );
-        }
-      }),
+        await Product.update(
+          { stockQuantity: sequelize.literal(`"stockQuantity" + ${item.quantity}`) },
+          { where: { id: item.productId }, transaction: t }
+        );
+      })
     );
 
     await order.update(
@@ -455,15 +381,14 @@ export const cancelOrder = async (req, res, next) => {
         cancelledAt: new Date(),
         cancelReason: cancelReason || 'Customer request',
       },
-      { transaction: t },
+      { transaction: t }
     );
 
     await t.commit();
-    t = null;
-
     return ApiResponse.success(res, 'Order canceled successfully');
   } catch (error) {
     if (t) await t.rollback();
+    console.error('Error in cancelOrder:', error.message, error.stack);
     next(error);
   }
 };
